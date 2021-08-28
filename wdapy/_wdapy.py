@@ -25,9 +25,11 @@ class CommonClient(abc.ABC):
 
     def app_current(self):
         self.unlock()
+        raise NotImplementedError()
 
     def status(self) -> StatusInfo:
-        pass
+        data = self.request(GET, "/status")
+        return StatusInfo.value_of(data)
 
     @property
     def info(self) -> DeviceInfo:
@@ -37,6 +39,9 @@ class CommonClient(abc.ABC):
         pass
 
     def unlock(self):
+        pass
+
+    def window_size(self) -> WindowSize:
         pass
 
     def click(self, x: int, y: int):
@@ -55,15 +60,20 @@ class CommonClient(abc.ABC):
     def locked(self) -> bool:
         raise NotImplementedError()
 
-    def session(self, bundle_id: str = None):
+    def session(self, bundle_id: str = None) -> str:
         st = self.status()
         if st.session_id:
-            return
-        resp = self.request(POST, "/session", {"direcpp": ""})
+            return st.session_id
+        resp = self.request(POST, "/session", {"direcpp": ""})  # TODO
         return
 
     def set_recover_handler(self, recover: Recover):
         self._recover = Recover
+
+    def session_request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
+        session_id = self.session()
+        urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
+        return self.request(method, urlpath, payload)
 
     def request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
         full_url = self._wda_url.rstrip("/") + "/" + urlpath.lstrip("/")
@@ -72,15 +82,12 @@ class CommonClient(abc.ABC):
 
 
 class AppiumClient(CommonClient):
-    def __init__(self, wda_url: str):
+    """
+    client for https://github.com/appium/WebDriverAgent
+    """
+
+    def __init__(self, wda_url: str = DEFAULT_WDA_URL):
         super().__init__(wda_url)
-
-    def status(self):
-        data = self.request(GET, "/status")
-        return StatusInfo.value_of(data)
-
-    def click(self, x: int, y: int):
-        pass
 
 
 class MyClient(AppiumClient):

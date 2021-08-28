@@ -11,3 +11,6 @@ class RequestMethod(str, enum.Enum):
 
 GET = RequestMethod.GET
 POST = RequestMethod.POST
+
+
+DEFAULT_WDA_URL = "http://localhost:8100"
