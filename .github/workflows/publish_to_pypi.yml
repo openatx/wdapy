@@ -1,4 +1,4 @@
-name: Publish Python 🐍 distributions 📦 to PyPI
+name: Publish to PyPI
 on: push
 jobs:
   build-n-publish:
@@ -12,9 +12,11 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.7
-    - name: Run UnitTest
+    - name: Install requirements
       run: |
         pip3 install -e .
+    - name: Run UnitTest
+      run: |
         python tests/*.py
     - name: Install pypa/build and Build targz and wheel
       run: |
