@@ -2,3 +2,4 @@ requests>=2.9.1
 Deprecated>=1.2.6
 Pillow
 logzero
+cached-property
