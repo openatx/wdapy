@@ -10,14 +10,24 @@ pip3 install wdapy
 
 ## Usage
 
+Create Client instance
 ```python
 import wdapy
 
 c = wdapy.AppiumClient()
-st = c.status()
-print(st.ip)
+# or
+c = wdapy.AppiumClient("http://localhost:8100")
 ```
 
+Call WDA method
+
+```python
+print(c.scale) # 2 or 3
+print(c.window_size()) # (width, height)
+
+c.screenshot().save("screenshot.jpg")
+# todo, need to add more method
+```
 
 ## How to contribute
 Assume that you want to add a new method

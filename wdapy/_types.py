@@ -1,14 +1,12 @@
 # coding: utf-8
 #
 
+__all__ = ["Recover", "StatusInfo", "AppInfo"]
+
 import enum
 import typing
 import abc
-
-
-class WindowSize(typing.NamedTuple):
-    width: int
-    height: int
+from ._utils import camel_to_snake
 
 
 def smart_value_of(obj, data: dict):
@@ -23,11 +21,35 @@ class Recover(abc.ABC):
 
 
 class _Base:
+    def __init__(self):
+        # set default value
+        for k, _ in typing.get_type_hints(self).items():
+            if not hasattr(self, k):
+                setattr(self, k, None)
+
     def __repr__(self):
         attrs = []
         for k, v in self.__dict__.items():
             attrs.append(f"{k}={v!r}")
-        return f"<{self.__class__.__name__} " + ",".join(attrs) + ">"
+        return f"<{self.__class__.__name__} " + ", ".join(attrs) + ">"
+
+    @classmethod
+    def value_of(cls, data: dict):
+        instance = cls()
+        for k, v in data.items():
+            key = camel_to_snake(k)
+            if hasattr(instance, key):
+                setattr(instance, key, v)
+
+        return instance
+
+
+class AppInfo(_Base):
+    name: str
+    process_arguments: dict
+    pid: int
+    bundle_id: str
+    foo: int
 
 
 class StatusInfo(_Base):

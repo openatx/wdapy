@@ -8,7 +8,6 @@ from wdapy import AppiumClient
 
 class SimpleTest(unittest.TestCase):
     def setUp(self):
-        print("setup")
         self._client = AppiumClient("http://localhost:8100")
 
     def test_status(self):
@@ -26,6 +25,22 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual("yyds", st.session_id)
         self.assertEqual(
             "WebDriverAgent is ready to accept commands", st.message)
+
+    def test_is_locked(self):
+        m = MagicMock(return_value={
+            "value": False,
+        })
+        self._client.request = m
+        self.assertEqual(False, self._client.is_locked())
+
+    def test_app_start(self):
+        pass
+
+    def test_app_terminate(self):
+        pass
+
+    def test_unlock(self):
+        pass
 
 
 if __name__ == "__main__":
