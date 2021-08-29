@@ -15,9 +15,10 @@ jobs:
     - name: Install requirements
       run: |
         pip3 install -e .
+        pip3 install pytest
     - name: Run UnitTest
       run: |
-        python tests/*.py
+        py.test -vv tests/
     - name: Install pypa/build and Build targz and wheel
       run: |
         python3 -m pip install wheel
