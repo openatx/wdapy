@@ -83,6 +83,10 @@ class CommonClient(abc.ABC):
         value = data['value']
         return AppInfo.value_of(value)
 
+    def sourcetree(self) -> SourceTree:
+        data = self.request(GET, "/source")
+        return SourceTree.value_of(data)
+
     def status(self) -> StatusInfo:
         data = self.request(GET, "/status")
         return StatusInfo.value_of(data)
@@ -109,6 +113,9 @@ class CommonClient(abc.ABC):
 
     def homescreen(self):
         self.request(POST, "/wda/homescreen")
+
+    def shutdown(self):
+        self.request(GET, "/wda/shutdown")
 
     def get_orientation(self) -> Orientation:
         value = self.session_request(GET, '/orientation')['value']
@@ -159,6 +166,13 @@ class CommonClient(abc.ABC):
         value = self.session_request(GET, "/wda/screen")['value']
         return value['scale']
 
+    @cached_property
+    def status_barsize(self) -> int:
+        # Response example
+        # {"statusBarSize": {'width': 320, 'height': 20}, 'scale': 2}
+        value = self.session_request(GET, "/wda/screen")['value']
+        return value['statusBarSize']
+
     def screenshot(self) -> Image.Image:
         """ take screenshot """
         value = self.request(GET, "/screenshot")["value"]
@@ -166,6 +180,14 @@ class CommonClient(abc.ABC):
         buf = io.BytesIO(raw_value)
         im = Image.open(buf)
         return im.convert("RGB")
+
+    def battery_info(self):
+        data = self.session_request(GET, "/wda/batteryInfo")["value"]
+        return BatteryInfo.value_of(data)
+
+    def device_info(self):
+        data = self.session_request(GET, "/wda/device/info")["value"]
+        return DeviceInfo.value_of(data)
 
     def session(self,
                 bundle_id: str = None,
