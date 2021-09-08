@@ -1,7 +1,7 @@
 # coding: utf-8
 #
 
-__all__ = ["Recover", "StatusInfo", "AppInfo", "DeviceInfo", "BatteryInfo", "SourceTree"]
+__all__ = ["Recover", "StatusInfo", "AppInfo", "DeviceInfo", "BatteryInfo", "SourceTree", "StatusBarSize"]
 
 import enum
 import typing
@@ -71,8 +71,8 @@ class DeviceInfo(_Base):
     current_locale: str
     model: str
     uuid: str
-    userinterface_idiom: int
-    userinterface_style: str
+    user_interface_idiom: int
+    user_interface_style: str
     name: str
     is_simulator: bool
 
@@ -84,3 +84,14 @@ class BatteryInfo(_Base):
 class SourceTree(_Base):
     value: str
     sessionId: str
+
+class StatusBarSize(_Base):
+    width: int
+    height: int
+
+class BatteryState(enum.IntEnum):
+    Unknown = 0
+    Unplugged = 1
+    Charging = 2
+    Full = 3
+

@@ -4,6 +4,7 @@
 import unittest
 from unittest.mock import MagicMock
 from wdapy import AppiumClient
+from wdapy._types import BatteryState
 
 
 class SimpleTest(unittest.TestCase):
@@ -76,11 +77,21 @@ class SimpleTest(unittest.TestCase):
     def test_batteryinfo(self):
         self._client.session_request = MagicMock(return_value={
             "level": 0.9999999999999999,
-            "state": 2
+            "state": 0
         })
         bi = self._client.battery_info()
         self.assertEqual(0.9999999999999999, bi.level)
-        self.assertEqual(2, bi.state)
+        self.assertEqual(True, bi.state in BatteryState.__members__)
+
+    def test_statusbarsize(self):
+        self._client.session_request = MagicMock(return_value={
+            "width": 320,
+            "height": 20
+        })
+        sts = self._client.status_barsize()
+        self.assertEqual(320, sts.width)
+        self.assertEqual(20, sts.height)
+
 
 
 

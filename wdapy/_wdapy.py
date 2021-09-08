@@ -167,11 +167,11 @@ class CommonClient(abc.ABC):
         return value['scale']
 
     @cached_property
-    def status_barsize(self) -> int:
+    def status_barsize(self) -> StatusBarSize:
         # Response example
         # {"statusBarSize": {'width': 320, 'height': 20}, 'scale': 2}
         value = self.session_request(GET, "/wda/screen")['value']
-        return value['statusBarSize']
+        return StatusBarSize.value_of(value['statusBarSize'])
 
     def screenshot(self) -> Image.Image:
         """ take screenshot """
@@ -181,11 +181,11 @@ class CommonClient(abc.ABC):
         im = Image.open(buf)
         return im.convert("RGB")
 
-    def battery_info(self):
+    def battery_info(self) -> BatteryInfo:
         data = self.session_request(GET, "/wda/batteryInfo")["value"]
         return BatteryInfo.value_of(data)
 
-    def device_info(self):
+    def device_info(self) -> DeviceInfo:
         data = self.session_request(GET, "/wda/device/info")["value"]
         return DeviceInfo.value_of(data)
 
