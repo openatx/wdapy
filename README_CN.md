@@ -36,6 +36,20 @@ import wdapy
 c = wdapy.AppiumClient()
 st = c.status()
 print(st.ip)
+
+print(c.scale) # 2 or 3
+print(c.window_size()) # (width, height)
+
+c.screenshot().save("screenshot.jpg")
+
+print(c.device_info()) # (timeZone, currentLocation, model and so on)
+
+print(c.battery_info()) # (level, state)
+
+print(c.sourcetree())
+
+print(c.status_barsize) # (width, height)
+# todo, need to add more method
 ```
 
 ## 如何参与贡献
@@ -51,6 +65,7 @@ print(st.ip)
 ## Contributors
 
 - [codeskyblue](https://github.com/codeskyblue)
+- [justinxiang](https://github.com/Justin-Xiang)
 
 ## LICENSE
 [MIT](LICENSE)

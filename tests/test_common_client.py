@@ -4,6 +4,7 @@
 import unittest
 from unittest.mock import MagicMock
 from wdapy import AppiumClient
+from wdapy._types import BatteryState
 
 
 class SimpleTest(unittest.TestCase):
@@ -26,6 +27,16 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(
             "WebDriverAgent is ready to accept commands", st.message)
 
+    def test_sourcetree(self):
+        self._client.request = MagicMock(return_value={
+            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n",
+            "sessionId": "test"
+        })
+        sourcetree = self._client.sourcetree()
+        self.assertEqual("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n", sourcetree.value)
+        self.assertEqual("test", sourcetree.sessionId)
+
+
     def test_is_locked(self):
         m = MagicMock(return_value={
             "value": False,
@@ -41,6 +52,47 @@ class SimpleTest(unittest.TestCase):
 
     def test_unlock(self):
         pass
+
+    def test_deviceinfo(self):
+        self._client.session_request = MagicMock(return_value={
+            "timeZone": "GMT+0800",
+            "currentLocale": "zh_CN",
+            "model": "iPhone",
+            "uuid": "12345678-ABCD-1234-ABCD-123456789ABC",
+            "userInterfaceIdiom": 0,
+            "userInterfaceStyle": "light",
+            "name": "iPhone X",
+            "isSimulator": False
+        })
+        di = self._client.device_info()
+        self.assertEqual("GMT+0800", di.time_zone)
+        self.assertEqual("zh_CN", di.current_locale)
+        self.assertEqual("iPhone", di.model)
+        self.assertEqual("12345678-ABCD-1234-ABCD-123456789ABC", di.uuid)
+        self.assertEqual(0, di.userinterface_idiom)
+        self.assertEqual("light", di.userinterface_style)
+        self.assertEqual("iPhone X", di.name)
+        self.assertEqual(False, di.is_simulator)
+
+    def test_batteryinfo(self):
+        self._client.session_request = MagicMock(return_value={
+            "level": 0.9999999999999999,
+            "state": 0
+        })
+        bi = self._client.battery_info()
+        self.assertEqual(0.9999999999999999, bi.level)
+        self.assertEqual(True, bi.state in BatteryState.__members__)
+
+    def test_statusbarsize(self):
+        self._client.session_request = MagicMock(return_value={
+            "width": 320,
+            "height": 20
+        })
+        sts = self._client.status_barsize()
+        self.assertEqual(320, sts.width)
+        self.assertEqual(20, sts.height)
+
+
 
 
 if __name__ == "__main__":
