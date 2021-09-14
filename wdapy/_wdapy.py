@@ -7,15 +7,17 @@ import functools
 import io
 import json
 import typing
+from wdapy.usbmux import usbmux
 
-from logzero import setup_logger
 import requests
 from cached_property import cached_property
+from logzero import setup_logger
 from PIL import Image
 
 from ._proto import *
 from ._types import *
 from .exceptions import *
+from .usbmux import requests_usbmux
 
 logger = setup_logger("wdapy")
 
@@ -29,6 +31,7 @@ class HTTPResponse:
         return self._err is None and self._resp.status_code == 200
 
     def json(self) -> dict:
+        assert self._resp is not None
         try:
             return self._resp.json()
         except json.JSONDecodeError:
@@ -235,12 +238,14 @@ class CommonClient(abc.ABC):
     def request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
         full_url = self._wda_url.rstrip("/") + "/" + urlpath.lstrip("/")
         logger.debug("$ %s", f"curl -X{method} {full_url} -d {payload!r}")
+        
         resp = self._request_with_error(method, full_url, payload)
         if not resp.is_success():
             if self._recover and not self._recover.recover():
                 raise RequestError(
                     "recover failed", resp.get_error_message())
             resp = self._request_with_error(method, full_url, payload)
+        resp.raise_if_failed()
 
         short_json = resp.json().copy()
         for k, v in short_json.items():
@@ -256,13 +261,18 @@ class CommonClient(abc.ABC):
         return resp.json()
 
     def _request_with_error(self, method: RequestMethod, url: str, payload: dict, **kwargs) -> HTTPResponse:
+        session = self._requests_session_pool_get()
         _request = functools.partial(
-            requests.request, method, url, json=payload)
+            session.request, method, url, json=payload)
         try:
             resp = _request(**kwargs)
             return HTTPResponse(resp, None)
         except requests.RequestException as err:
             return HTTPResponse(err.response, err)
+
+    @functools.lru_cache(1024)
+    def _requests_session_pool_get(self) -> requests.Session:
+        return requests_usbmux.Session()
 
 
 class AppiumClient(CommonClient):
@@ -272,6 +282,14 @@ class AppiumClient(CommonClient):
 
     def __init__(self, wda_url: str = DEFAULT_WDA_URL):
         super().__init__(wda_url)
+
+
+class AppiumUSBClient(AppiumClient):
+    def __init__(self, udid: str = None, port: int = 8100):
+        if udid is None:
+            _usbmux = usbmux.Usbmux()
+            udid = _usbmux.get_single_device_udid()
+        super().__init__(requests_usbmux.DEFAULT_SCHEME+udid+f":{port}")
 
 
 class NanoscopicClient(AppiumClient):
