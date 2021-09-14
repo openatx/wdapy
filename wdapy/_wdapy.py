@@ -7,19 +7,18 @@ import functools
 import io
 import json
 import typing
-from wdapy.usbmux import usbmux
 
 import requests
 from cached_property import cached_property
 from logzero import setup_logger
 from PIL import Image
 
+from ._alert import Alert
+from ._base import BaseClient
 from ._proto import *
 from ._types import *
 from .exceptions import *
-from .usbmux import requests_usbmux
-
-logger = setup_logger("wdapy")
+from .usbmux import requests_usbmux, usbmux
 
 
 class HTTPResponse:
@@ -52,13 +51,9 @@ class HTTPResponse:
             raise RequestError(self._resp.status_code, self._resp.text)
 
 
-class CommonClient(abc.ABC):
+class CommonClient(BaseClient):
     def __init__(self, wda_url: str):
-        self._wda_url = wda_url
-        self._request_timeout = None
-
-        self._session_id: str = None
-        self._recover: Recover = None
+        super().__init__(wda_url)
         self.__ui_size = None
 
     def app_start(self, bundle_id: str):
@@ -85,6 +80,10 @@ class CommonClient(abc.ABC):
         data = self.request(GET, "/wda/activeAppInfo")
         value = data['value']
         return AppInfo.value_of(value)
+
+    @cached_property
+    def alert(self) -> Alert:
+        return Alert(self)
 
     def sourcetree(self) -> SourceTree:
         data = self.request(GET, "/source")
@@ -169,7 +168,6 @@ class CommonClient(abc.ABC):
         value = self.session_request(GET, "/wda/screen")['value']
         return value['scale']
 
-    @cached_property
     def status_barsize(self) -> StatusBarSize:
         # Response example
         # {"statusBarSize": {'width': 320, 'height': 20}, 'scale': 2}
@@ -188,91 +186,13 @@ class CommonClient(abc.ABC):
         data = self.session_request(GET, "/wda/batteryInfo")["value"]
         return BatteryInfo.value_of(data)
 
+    @property
+    def info(self) -> DeviceInfo:
+        return self.device_info()
+
     def device_info(self) -> DeviceInfo:
         data = self.session_request(GET, "/wda/device/info")["value"]
         return DeviceInfo.value_of(data)
-
-    def session(self,
-                bundle_id: str = None,
-                arguments: list = None,
-                environment: dict = None) -> str:
-        """ create session and return session id """
-        capabilities = {}
-        if bundle_id:
-            always_match = {
-                "bundleId": bundle_id,
-                "arguments": arguments or [],
-                "environment": environment or {},
-                "shouldWaitForQuiescence": False,
-            }
-            capabilities['alwaysMatch'] = always_match
-        payload = {
-            "capabilities": capabilities,
-            "desiredCapabilities": capabilities.get('alwaysMatch',
-                                                    {}),  # 兼容旧版的wda
-        }
-        data = self.request(POST, "/session", payload)
-
-        # update cached session_id
-        self._session_id = data['sessionId']
-        return self._session_id
-
-    def set_recover_handler(self, recover: Recover):
-        self._recover = Recover
-
-    def _get_valid_session_id(self) -> str:
-        if self._session_id:
-            return self._session_id
-        old_session_id = self.status().session_id
-        if old_session_id:
-            self._session_id = old_session_id
-        else:
-            self._session_id = self.session()
-        return self._session_id
-
-    def session_request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
-        session_id = self._get_valid_session_id()
-        urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
-        return self.request(method, urlpath, payload)
-
-    def request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
-        full_url = self._wda_url.rstrip("/") + "/" + urlpath.lstrip("/")
-        logger.debug("$ %s", f"curl -X{method} {full_url} -d {payload!r}")
-        
-        resp = self._request_with_error(method, full_url, payload)
-        if not resp.is_success():
-            if self._recover and not self._recover.recover():
-                raise RequestError(
-                    "recover failed", resp.get_error_message())
-            resp = self._request_with_error(method, full_url, payload)
-        resp.raise_if_failed()
-
-        short_json = resp.json().copy()
-        for k, v in short_json.items():
-            if isinstance(v, str) and len(v) > 40:
-                v = v[:20] + "... skip ..." + v[-10:]
-            short_json[k] = v
-        logger.debug("==> Response <==\n%s", json.dumps(short_json, indent=4))
-
-        value = resp.json().get("value")
-        if value and isinstance(value, dict) and value.get("error"):
-            raise ApiError(value["error"], value.get("message"))
-
-        return resp.json()
-
-    def _request_with_error(self, method: RequestMethod, url: str, payload: dict, **kwargs) -> HTTPResponse:
-        session = self._requests_session_pool_get()
-        _request = functools.partial(
-            session.request, method, url, json=payload)
-        try:
-            resp = _request(**kwargs)
-            return HTTPResponse(resp, None)
-        except requests.RequestException as err:
-            return HTTPResponse(err.response, err)
-
-    @functools.lru_cache(1024)
-    def _requests_session_pool_get(self) -> requests.Session:
-        return requests_usbmux.Session()
 
 
 class AppiumClient(CommonClient):

@@ -76,9 +76,24 @@ class DeviceInfo(_Base):
     name: str
     is_simulator: bool
 
+
+class BatteryState(enum.IntEnum):
+    Unknown = 0
+    Unplugged = 1
+    Charging = 2
+    Full = 3
+
+
 class BatteryInfo(_Base):
     level: float
-    state: int
+    state: BatteryState
+
+    @staticmethod
+    def value_of(data: dict) -> "BatteryInfo":
+        info = BatteryInfo()
+        info.level = data['level']
+        info.state = BatteryState(data['state'])
+        return info
 
 
 class SourceTree(_Base):
@@ -89,9 +104,4 @@ class StatusBarSize(_Base):
     width: int
     height: int
 
-class BatteryState(enum.IntEnum):
-    Unknown = 0
-    Unplugged = 1
-    Charging = 2
-    Full = 3
 
