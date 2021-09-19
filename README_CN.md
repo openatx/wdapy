@@ -49,6 +49,14 @@ print(c.battery_info()) # (level, state)
 print(c.sourcetree())
 
 print(c.status_barsize) # (width, height)
+
+print(c.app_list()) # (pid, bundleId)
+
+c.deactivate(4) # deactivate current app for 4s
+
+c.set_clipboard("123")
+
+c.press_duration(name="power_plus_home", duration=1) #take a screenshot
 # todo, need to add more method
 ```
 

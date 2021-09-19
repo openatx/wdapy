@@ -81,6 +81,16 @@ class CommonClient(BaseClient):
         value = data['value']
         return AppInfo.value_of(value)
 
+    def app_list(self) -> AppList:
+        value = self.session_request(GET, "/wda/apps/list")["value"][0]
+        return AppList.value_of(value)
+
+    def deactive(self, duration: float):
+        self.session_request(POST, "/wda/deactivateApp", {
+            "duration": duration
+        })
+
+
     @cached_property
     def alert(self) -> Alert:
         return Alert(self)
@@ -96,6 +106,12 @@ class CommonClient(BaseClient):
     def open_url(self, url: str):
         self.session_request(POST, "/url", {
             "url": url
+        })
+
+    def set_clipboard(self, content: str, content_type="plaintext"):
+        self.session_request(POST, "/wda/setPasteboard",{
+            "content": base64.b64encode(content.encode()).decode(),
+            "contentType": content_type
         })
 
     def appium_settings(self, kwargs: dict = None) -> dict:
@@ -147,6 +163,7 @@ class CommonClient(BaseClient):
     def tap(self, x: int, y: int):
         self.session_request(POST, "/wda/tap/0", {"x": x, "y": y})
 
+
     def swipe(self,
               from_x: int,
               from_y: int,
@@ -160,6 +177,35 @@ class CommonClient(BaseClient):
             "toY": to_y,
             "duration": duration}
         self.session_request(POST, "/wda/dragfromtoforduration", payload)
+
+
+    def press(self, name: PressName):
+        payload = {
+            "name": name
+        }
+        self.session_request(POST, "/wda/pressButton", payload)
+
+    #to do
+    def press_duration(self, name: PressDurationName, duration: float):
+        hid_usages = {
+            "home": 0x40,
+            "volumeup": 0xE9,
+            "volumedown": 0xEA,
+            "power": 0x30,
+            "snapshot": 0x65,
+            "power_plus_home": 0x65
+        }
+        name = name.lower()
+        if name not in hid_usages:
+            raise ValueError("Invalid name:", name)
+        hid_usages = hid_usages[name]
+        payload = {
+            "page": 0x0C,
+            "usage": hid_usages,
+            "duration": duration
+        }
+        return self.session_request(POST, "/wda/performIoHidEvent", payload)
+
 
     @cached_property
     def scale(self) -> int:
