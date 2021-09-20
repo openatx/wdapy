@@ -75,6 +75,13 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual("iPhone X", di.name)
         self.assertEqual(False, di.is_simulator)
 
+    def test_orientation(self):
+        self._client.session_request = MagicMock(return_value={
+            "value": "PORTRAIT"
+        })
+        ot = self._client.get_orientation()
+        self.assertEqual("PORTRAIT", ot)
+
     def test_batteryinfo(self):
         self._client.session_request = MagicMock(return_value={
             "value": {
@@ -100,6 +107,19 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(320, sts.width)
         self.assertEqual(20, sts.height)
 
+    def test_applist(self):
+        self._client.session_request = MagicMock(return_value={
+            "value": {
+                "AppList": {
+                    "pid": 4453,
+                    "bundle_id": "com.apple.springboard"
+                }
+            }
+        })
+        with self.assertRaises(KeyError):
+            al = self._client.app_list()
+            self.assertEqual(4453, al.pid)
+            self.assertEqual("com.apple.springboard", al.bundle_id)
 
 
 
