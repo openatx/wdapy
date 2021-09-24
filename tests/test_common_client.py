@@ -3,6 +3,7 @@
 
 import unittest
 from unittest.mock import MagicMock
+import wdapy
 from wdapy import AppiumClient
 from wdapy._types import BatteryState
 
@@ -121,6 +122,11 @@ class SimpleTest(unittest.TestCase):
             self.assertEqual(4453, al.pid)
             self.assertEqual("com.apple.springboard", al.bundle_id)
 
+    def test_press(self):
+        self._client.session_request = MagicMock(return_value={"value": None})
+        self._client.press(wdapy.Keycode.HOME)
+        payload = self._client.session_request.call_args.args[-1]
+        self.assertEqual(wdapy.Keycode.HOME, payload['name'])
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 # coding: utf-8
 #
 
-__all__ = ["Recover", "StatusInfo", "AppInfo", "DeviceInfo", "BatteryInfo", "SourceTree", "StatusBarSize", "AppList", "PressName", "PressDurationName"]
+__all__ = ["Recover", "StatusInfo", "AppInfo", "DeviceInfo", "BatteryInfo", "SourceTree", "StatusBarSize", "AppList"]
 
 import enum
 import typing
@@ -104,19 +104,6 @@ class StatusBarSize(_Base):
     width: int
     height: int
 
-
-class PressName(str, enum.Enum):
-    home = 'home'
-    volumeUp = 'volumeUp'
-    volumeDown = 'volumeDown'
-
-class PressDurationName(str, enum.Enum):
-    home = 'home'
-    volumeUp = 'volumeUp'
-    volumeDown = 'volumeDown'
-    power = 'power'
-    snapshot = 'snapshot'
-    power_plus_home = 'power_plus_home'
 
 class AppList(_Base):
     pid: int

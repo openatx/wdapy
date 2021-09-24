@@ -4,9 +4,11 @@
 import logging
 import enum
 
-logger = logging.getLogger("wdapy")
-
+NAME = "wdapy"
 DEFAULT_WDA_URL = "http://localhost:8100"
+
+logger = logging.getLogger(NAME)
+
 
 class RequestMethod(str, enum.Enum):
     GET = "GET"
@@ -28,3 +30,14 @@ class Orientation(str, enum.Enum):
     PORTRAIT = 'PORTRAIT'
     LANDSCAPE_RIGHT = 'UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT'
     PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
+
+
+class Keycode(str, enum.Enum):
+    HOME = "home"
+    VOLUME_UP = "volumeUp"
+    VOLUME_DOWN = "volumeDown"
+
+    # allow only for press_duration
+    POWER = "power"
+    SNAPSHOT = "snapshot"
+    POWER_PLUS_HOME = "power_plus_home"

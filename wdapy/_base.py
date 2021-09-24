@@ -10,7 +10,7 @@ import requests
 import simplejson as json
 
 from ._proto import *
-from ._types import Recover
+from ._types import Recover, StatusInfo
 from .exceptions import *
 from .usbmux import requests_usbmux
 
@@ -54,6 +54,10 @@ class BaseClient:
         self._session_id: str = None
         self._recover: Recover = None
     
+    def status(self) -> StatusInfo:
+        data = self.request(GET, "/status")
+        return StatusInfo.value_of(data)
+
     def session(self,
                 bundle_id: str = None,
                 arguments: list = None,
@@ -93,13 +97,27 @@ class BaseClient:
         return self._session_id
 
     def session_request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
+        """ request with session_id """
         session_id = self._get_valid_session_id()
         urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
-        return self.request(method, urlpath, payload)
+        try:
+            return self.request(method, urlpath, payload)
+        except RequestError as e:
+            # In some condition, session_id exist in /status, but not working
+            # The bellow code fix that case
+            if len(e.args) >= 2 and "Session does not exist" in e.args[1]:
+                self._session_id = self.session()
+                urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
+                return self.request(method, urlpath, payload)
+            raise
+            
 
     def request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
+        """
+        """
         full_url = self._wda_url.rstrip("/") + "/" + urlpath.lstrip("/")
-        logger.debug("$ %s", f"curl -X{method} {full_url} -d {payload!r}")
+        payload_debug = payload or ""
+        logger.debug("$ %s", f"curl -X{method} {full_url} -d {payload_debug!r}")
         
         resp = self._request_with_error(method, full_url, payload)
         if not resp.is_success():

@@ -37,9 +37,6 @@ class HTTPResponse:
             return RequestError("JSON decode error", self._resp.text)
 
     def get_error_message(self) -> str:
-        # if self._err:
-        #     return str(self._err)
-        # self.json()
         if self._resp:
             return self._resp.text
         return str(self._err)
@@ -55,6 +52,18 @@ class CommonClient(BaseClient):
     def __init__(self, wda_url: str):
         super().__init__(wda_url)
         self.__ui_size = None
+        self.__debug = False
+
+    @property
+    def debug(self) -> bool:
+        return self.__debug
+
+    @debug.setter
+    def debug(self, v: bool):
+        if v:
+            setup_logger(NAME)
+        else:
+            setup_logger(NAME, level=logging.INFO)
 
     def app_start(self, bundle_id: str):
         self.session_request(POST, "/wda/apps/launch", {
@@ -98,10 +107,6 @@ class CommonClient(BaseClient):
     def sourcetree(self) -> SourceTree:
         data = self.request(GET, "/source")
         return SourceTree.value_of(data)
-
-    def status(self) -> StatusInfo:
-        data = self.request(GET, "/status")
-        return StatusInfo.value_of(data)
 
     def open_url(self, url: str):
         self.session_request(POST, "/url", {
@@ -179,14 +184,13 @@ class CommonClient(BaseClient):
         self.session_request(POST, "/wda/dragfromtoforduration", payload)
 
 
-    def press(self, name: PressName):
+    def press(self, name: Keycode):
         payload = {
             "name": name
         }
         self.session_request(POST, "/wda/pressButton", payload)
 
-    #to do
-    def press_duration(self, name: PressDurationName, duration: float):
+    def press_duration(self, name: Keycode, duration: float):
         hid_usages = {
             "home": 0x40,
             "volumeup": 0xE9,
@@ -205,7 +209,6 @@ class CommonClient(BaseClient):
             "duration": duration
         }
         return self.session_request(POST, "/wda/performIoHidEvent", payload)
-
 
     @cached_property
     def scale(self) -> int:
@@ -258,7 +261,7 @@ class AppiumUSBClient(AppiumClient):
         super().__init__(requests_usbmux.DEFAULT_SCHEME+udid+f":{port}")
 
 
-class NanoscopicClient(AppiumClient):
+class NanoClient(AppiumClient):
     """
     Repo: https://github.com/nanoscopic/WebDriverAgent
 
@@ -287,3 +290,11 @@ class NanoscopicClient(AppiumClient):
             "x2": to_x,
             "y2": to_y,
             "delay": duration})
+
+
+class NanoUSBClient(NanoClient):
+    def __init__(self, udid: str = None, port: int = 8100):
+        if udid is None:
+            _usbmux = usbmux.Usbmux()
+            udid = _usbmux.get_single_device_udid()
+        super().__init__(requests_usbmux.DEFAULT_SCHEME+udid+f":{port}")
