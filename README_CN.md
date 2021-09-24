@@ -23,6 +23,8 @@
 ## 依赖
 Python3.7+
 
+> 运行单元测试依赖3.8+
+
 ## 安装
 ```bash
 pip3 install wdapy

@@ -3,6 +3,11 @@
 
 [中文](README_CN.md)
 
+## Requires
+Python 3.7+
+
+> Run unittest require py 3.8+
+
 ## Installation
 ```bash
 pip3 install wdapy
