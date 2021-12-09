@@ -1,14 +1,10 @@
 # coding: utf-8
 #
 
-import logging
 import enum
 
 NAME = "wdapy"
 DEFAULT_WDA_URL = "http://localhost:8100"
-
-logger = logging.getLogger(NAME)
-
 
 class RequestMethod(str, enum.Enum):
     GET = "GET"

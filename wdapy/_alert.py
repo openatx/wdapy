@@ -8,6 +8,8 @@ import typing
 from wdapy.exceptions import RequestError
 from ._proto import *
 from ._base import BaseClient
+from ._logger import logger
+
 
 class Alert:
     def __init__(self, client: BaseClient):

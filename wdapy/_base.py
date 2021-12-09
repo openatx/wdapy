@@ -11,8 +11,9 @@ import simplejson as json
 
 from ._proto import *
 from ._types import Recover, StatusInfo
+from ._logger import logger
 from .exceptions import *
-from .usbmux import requests_usbmux
+from .usbmux import requests_usbmux, MuxError
 
 
 class HTTPResponse:
@@ -45,10 +46,9 @@ class HTTPResponse:
             raise RequestError(self._resp.status_code, self._resp.text)
 
 
-
 class BaseClient:
     def __init__(self, wda_url: str):
-        self._wda_url = wda_url
+        self._wda_url = wda_url.rstrip("/") + "/"
         self._request_timeout = None
 
         self._session_id: str = None
@@ -84,7 +84,7 @@ class BaseClient:
         return self._session_id
 
     def set_recover_handler(self, recover: Recover):
-        self._recover = Recover
+        self._recover = recover
 
     def _get_valid_session_id(self) -> str:
         if self._session_id:
@@ -149,6 +149,8 @@ class BaseClient:
             return HTTPResponse(resp, None)
         except requests.RequestException as err:
             return HTTPResponse(err.response, err)
+        except MuxError as err:
+            return HTTPResponse(requests.Response(), err)
 
     @functools.lru_cache(1024)
     def _requests_session_pool_get(self) -> requests.Session:

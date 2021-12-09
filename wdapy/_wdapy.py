@@ -1,11 +1,11 @@
 # coding: utf-8
 
-import abc
 import base64
-import enum
-import functools
 import io
 import json
+import subprocess
+import sys
+import time
 import typing
 
 import requests
@@ -15,6 +15,7 @@ from PIL import Image
 
 from ._alert import Alert
 from ._base import BaseClient
+from ._logger import logger
 from ._proto import *
 from ._types import *
 from .exceptions import *
@@ -244,6 +245,27 @@ class CommonClient(BaseClient):
         return DeviceInfo.value_of(data)
 
 
+
+class XCUITestRecover(Recover):
+    def __init__(self, udid: str):
+        self._udid = udid
+
+    def recover(self) -> bool:
+        """ launch by tidevice
+        
+        https://github.com/alibaba/tidevice
+        """
+        args = [sys.executable, '-m', 'tidevice', '-u', self._udid, 'xctest']
+        subprocess.Popen(args,
+                         stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL,
+                         close_fds=True)
+        logger.info("wait 10 seconds for xcuitest server started")
+        time.sleep(10)
+        return True
+
+
 class AppiumClient(CommonClient):
     """
     client for https://github.com/appium/WebDriverAgent
@@ -259,6 +281,7 @@ class AppiumUSBClient(AppiumClient):
             _usbmux = usbmux.Usbmux()
             udid = _usbmux.get_single_device_udid()
         super().__init__(requests_usbmux.DEFAULT_SCHEME+udid+f":{port}")
+        self.set_recover_handler(XCUITestRecover(udid))
 
 
 class NanoClient(AppiumClient):
@@ -298,3 +321,4 @@ class NanoUSBClient(NanoClient):
             _usbmux = usbmux.Usbmux()
             udid = _usbmux.get_single_device_udid()
         super().__init__(requests_usbmux.DEFAULT_SCHEME+udid+f":{port}")
+        self.set_recover_handler(XCUITestRecover(udid))
