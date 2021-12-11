@@ -1,10 +1,12 @@
 # coding: utf-8
 
+import atexit
 import base64
 import io
 import json
 import subprocess
 import sys
+import threading
 import time
 import typing
 
@@ -255,16 +257,36 @@ class XCUITestRecover(Recover):
         
         https://github.com/alibaba/tidevice
         """
+        logger.info("WDA is starting using tidevice ...")
         args = [sys.executable, '-m', 'tidevice', '-u', self._udid, 'xctest']
-        subprocess.Popen(args,
+        p = subprocess.Popen(args,
                          stdin=subprocess.DEVNULL,
-                         stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL,
-                         close_fds=True)
-        logger.info("wait 10 seconds for xcuitest server started")
-        time.sleep(10)
-        return True
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         start_new_session=True,
+                         close_fds=True, encoding="utf-8")
+        
+        success = False
+        deadline = time.time() + 10
+        while time.time() < deadline:
+            if p.poll() is not None:
+                logger.warning("xctest exit, output: %s", p.stdout.read())
+                return False
+            line = p.stdout.readline().strip()
+            # logger.info("%s", line)
+            if "WebDriverAgent start successfully" in line:
+                logger.info("WDA started")
+                success = True
+                break
 
+        def drain_stdout():
+            while p.stdout.read() != "":
+                pass
+        
+        if success:
+            threading.Thread(target=drain_stdout, daemon=True).start()
+            atexit.register(p.kill)
+        return success
 
 class AppiumClient(CommonClient):
     """
