@@ -48,6 +48,8 @@ c.set_clipboard("123")
 
 c.press_duration(name="power_plus_home", duration=1) #take a screenshot
 # todo, need to add more method
+
+c.send_keys("hello world")
 ```
 
 ## How to contribute

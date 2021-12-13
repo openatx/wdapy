@@ -169,6 +169,11 @@ class CommonClient(BaseClient):
         else:
             return self.__ui_size
 
+    def send_keys(self, value: str):
+        """ input with some text """
+        self.session_request(POST, "/wda/keys", {"value": list(value)})
+
+
     def tap(self, x: int, y: int):
         self.session_request(POST, "/wda/tap/0", {"x": x, "y": y})
 
