@@ -4,6 +4,7 @@ import atexit
 import base64
 import io
 import json
+import logging
 import subprocess
 import sys
 import threading

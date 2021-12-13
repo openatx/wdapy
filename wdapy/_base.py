@@ -35,7 +35,7 @@ class HTTPResponse:
         # if self._err:
         #     return str(self._err)
         # self.json()
-        if self._resp:
+        if self._resp is not None:
             return self._resp.text
         return str(self._err)
 
