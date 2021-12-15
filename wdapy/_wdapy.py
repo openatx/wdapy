@@ -183,7 +183,7 @@ class CommonClient(BaseClient):
               from_y: int,
               to_x: int,
               to_y: int,
-              duration: float = 0.2):
+              duration: float = 0.5):
         payload = {
             "fromX": from_x,
             "fromY": from_y,
@@ -333,7 +333,7 @@ class NanoClient(AppiumClient):
               from_y: int,
               to_x: int,
               to_y: int,
-              duration: float = .2):
+              duration: float = .5):
         """ fast swipe """
         self.request(POST, "/wda/swipe", {
             "x1": from_x,
