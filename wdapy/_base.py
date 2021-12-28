@@ -66,8 +66,8 @@ class HTTPResponse:
     def raise_if_failed(self):
         if self._error:
             raise RequestError("HTTP request error", self._error)
-        if self._response.status_code != 200:
-            raise RequestError(self._response.status_code, self._response.text)
+        if self.status_code != 200:
+            raise RequestError(self.status_code, self._response.text)
 
 
 class BaseClient:
