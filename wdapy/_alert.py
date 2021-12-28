@@ -14,7 +14,7 @@ from ._logger import logger
 class Alert:
     def __init__(self, client: BaseClient):
         self._client = client
-    
+        
     @property
     def exists(self) -> bool:
         try:

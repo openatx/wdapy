@@ -98,11 +98,10 @@ class CommonClient(BaseClient):
         value = self.session_request(GET, "/wda/apps/list")["value"][0]
         return AppList.value_of(value)
 
-    def deactive(self, duration: float):
+    def deactivate(self, duration: float):
         self.session_request(POST, "/wda/deactivateApp", {
             "duration": duration
         })
-
 
     @cached_property
     def alert(self) -> Alert:
@@ -118,10 +117,17 @@ class CommonClient(BaseClient):
         })
 
     def set_clipboard(self, content: str, content_type="plaintext"):
+        """ only works when WDA app is foreground """
         self.session_request(POST, "/wda/setPasteboard",{
             "content": base64.b64encode(content.encode()).decode(),
             "contentType": content_type
         })
+    
+    def get_clipboard(self, content_type="plaintext") -> str:
+        data = self.session_request(POST, "/wda/getPasteboard",{
+            "contentType": content_type
+        })
+        return base64.b64decode(data['value']).decode('utf-8')
 
     def appium_settings(self, kwargs: dict = None) -> dict:
         if kwargs is None:
@@ -152,31 +158,44 @@ class CommonClient(BaseClient):
         """
         Returns:
             UISize
+        
+        Ref:
+            FBElementCommands.m
         """
-        # 这里做了一点速度优化，跟进图像大小获取屏幕尺寸
-        orientation = self.get_orientation()
-        if self.__ui_size is None:
-            # 这里认为screenshot返回的屏幕转向时正确的
-            pixel_width, pixel_height = self.screenshot().size
-            w, h = pixel_width//self.scale, pixel_height//self.scale
-            if self.get_orientation() == Orientation.PORTRAIT:
-                self.__ui_size = (w, h)
-            else:
-                self.__ui_size = (h, w)
+        data = self.session_request(GET, "/window/size")
+        return data['value']['width'], data['value']['height']
+        
+        # 代码暂时保留，下面的方法为通过截图获取屏幕大小
+        # # 这里做了一点速度优化，跟进图像大小获取屏幕尺寸
+        # orientation = self.get_orientation()
+        # if self.__ui_size is None:
+        #     # 这里认为screenshot返回的屏幕转向时正确的
+        #     pixel_width, pixel_height = self.screenshot().size
+        #     w, h = pixel_width//self.scale, pixel_height//self.scale
+        #     if self.get_orientation() == Orientation.PORTRAIT:
+        #         self.__ui_size = (w, h)
+        #     else:
+        #         self.__ui_size = (h, w)
 
-        if orientation == Orientation.LANDSCAPE:
-            return self.__ui_size[::-1]
-        else:
-            return self.__ui_size
+        # if orientation == Orientation.LANDSCAPE:
+        #     return self.__ui_size[::-1]
+        # else:
+        #     return self.__ui_size
 
     def send_keys(self, value: str):
         """ input with some text """
         self.session_request(POST, "/wda/keys", {"value": list(value)})
 
-
     def tap(self, x: int, y: int):
         self.session_request(POST, "/wda/tap/0", {"x": x, "y": y})
-
+    
+    def touch_and_hold(self, x: int, y: int, duration: float):
+        """ touch and hold
+        
+        Ref:
+            FBElementCommands.m
+        """
+        self.session_request(POST, "/wda/touchAndHold", {"x": x, "y": y, "duration": duration})
 
     def swipe(self,
               from_x: int,
@@ -191,7 +210,6 @@ class CommonClient(BaseClient):
             "toY": to_y,
             "duration": duration}
         self.session_request(POST, "/wda/dragfromtoforduration", payload)
-
 
     def press(self, name: Keycode):
         payload = {

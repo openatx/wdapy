@@ -49,7 +49,6 @@ class AppInfo(_Base):
     process_arguments: dict
     pid: int
     bundle_id: str
-    foo: int
 
 
 class StatusInfo(_Base):

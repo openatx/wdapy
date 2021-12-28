@@ -5,55 +5,88 @@
 """
 
 import functools
+import typing
 
 import requests
 import simplejson as json
 
+from ._logger import logger
 from ._proto import *
 from ._types import Recover, StatusInfo
-from ._logger import logger
 from .exceptions import *
-from .usbmux import requests_usbmux, MuxError
+from .usbmux import MuxError, requests_usbmux
 
 
 class HTTPResponse:
     def __init__(self, resp: requests.Response, err: requests.RequestException):
-        self._resp = resp
-        self._err = err
+        self._response: requests.Response = resp
+        self._error: typing.Optional[Exception] = err
+
+    @property
+    def status_code(self) -> int:
+        if self._response is None:
+            return None
+        return self._response.status_code
 
     def is_success(self) -> bool:
-        return self._err is None and self._resp.status_code == 200
+        return self._error is None and self.status_code == 200
+    
+    def raise_if_session_error(self):
+        """
+        Raises:
+            WDASessionDoesNotExist
+        """
+        if self._error and "Session does not exist" in str(self._error):
+            raise WDASessionDoesNotExist(self._error)
 
+    def should_call_recover(self) -> bool:
+        """
+        Only return true when WDA is no response or can not connected
+        """
+        if isinstance(self._error, MuxError):
+            return True
+        elif self.status_code is None:
+            return True
+        return False
+        
     def json(self) -> dict:
-        assert self._resp is not None
+        assert self._response is not None
         try:
-            return self._resp.json()
+            return self._response.json()
         except json.JSONDecodeError:
-            return RequestError("JSON decode error", self._resp.text)
+            return RequestError("JSON decode error", self._response.text)
 
     def get_error_message(self) -> str:
-        # if self._err:
-        #     return str(self._err)
-        # self.json()
-        if self._resp is not None:
-            return self._resp.text
-        return str(self._err)
+        if self._response is not None:
+            message = self._response.text
+        else:
+            message = f"{self._error}"
+        return f"{message} status_code:{self.status_code}"
 
     def raise_if_failed(self):
-        if self._err:
-            raise RequestError("HTTP request error", self._err)
-        if self._resp.status_code != 200:
-            raise RequestError(self._resp.status_code, self._resp.text)
+        if self._error:
+            raise RequestError("HTTP request error", self._error)
+        if self._response.status_code != 200:
+            raise RequestError(self._response.status_code, self._response.text)
 
 
 class BaseClient:
     def __init__(self, wda_url: str):
         self._wda_url = wda_url.rstrip("/") + "/"
-        self._request_timeout = None
 
         self._session_id: str = None
         self._recover: Recover = None
+
+        self.__request_timeout = DEFAULT_HTTP_TIMEOUT
     
+    @property
+    def request_timeout(self) -> float:
+        return self.__request_timeout
+    
+    @request_timeout.setter
+    def request_timeout(self, timeout: float):
+        self.__request_timeout = timeout
+
     def status(self) -> StatusInfo:
         data = self.request(GET, "/status")
         return StatusInfo.value_of(data)
@@ -99,31 +132,32 @@ class BaseClient:
     def session_request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
         """ request with session_id """
         session_id = self._get_valid_session_id()
-        urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
+        session_urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
         try:
-            return self.request(method, urlpath, payload)
-        except RequestError as e:
+            return self.request(method, session_urlpath, payload)
+        except WDASessionDoesNotExist:
             # In some condition, session_id exist in /status, but not working
             # The bellow code fix that case
-            if len(e.args) >= 2 and "Session does not exist" in e.args[1]:
-                self._session_id = self.session()
-                urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
-                return self.request(method, urlpath, payload)
-            raise
-            
+            logger.debug("session %r does not exist, generate new one", session_id)
+            session_id = self._session_id = self.session()
+            session_urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
+            return self.request(method, session_urlpath, payload)
 
     def request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
         """
         """
         full_url = self._wda_url.rstrip("/") + "/" + urlpath.lstrip("/")
         payload_debug = payload or ""
-        logger.debug("$ %s", f"curl -X{method} {full_url} -d {payload_debug!r}")
+        logger.debug("$ %s", f"curl -X{method} --max-time {self.request_timeout:d} {full_url} -d {payload_debug!r}")
         
         resp = self._request_with_error(method, full_url, payload)
-        if not resp.is_success():
-            if self._recover and not self._recover.recover():
-                raise RequestError(
-                    "recover failed", resp.get_error_message())
+        resp.raise_if_session_error()
+
+        if resp.should_call_recover():
+            if self._recover:
+                if not self._recover.recover():
+                    raise RequestError(
+                        "recover failed", resp.get_error_message())
             resp = self._request_with_error(method, full_url, payload)
         resp.raise_if_failed()
 
@@ -143,7 +177,7 @@ class BaseClient:
     def _request_with_error(self, method: RequestMethod, url: str, payload: dict, **kwargs) -> HTTPResponse:
         session = self._requests_session_pool_get()
         _request = functools.partial(
-            session.request, method, url, json=payload)
+            session.request, method, url, json=payload, timeout=self.request_timeout)
         try:
             resp = _request(**kwargs)
             return HTTPResponse(resp, None)

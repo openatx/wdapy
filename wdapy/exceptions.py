@@ -9,6 +9,10 @@ class RequestError(WDAException):
     pass
 
 
+class WDASessionDoesNotExist(WDAException):
+    """ Session does not exist """
+
+
 class ApiError(WDAException):
     def __init__(self, error: str, message: str):
         self.error = error
