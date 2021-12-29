@@ -138,7 +138,7 @@ class BaseClient:
         except WDASessionDoesNotExist:
             # In some condition, session_id exist in /status, but not working
             # The bellow code fix that case
-            logger.debug("session %r does not exist, generate new one", session_id)
+            logger.info("session %r does not exist, generate new one", session_id)
             session_id = self._session_id = self.session()
             session_urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
             return self.request(method, session_urlpath, payload)

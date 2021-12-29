@@ -5,6 +5,7 @@ import base64
 import io
 import json
 import logging
+import queue
 import subprocess
 import sys
 import threading
@@ -290,27 +291,36 @@ class XCUITestRecover(Recover):
                          start_new_session=True,
                          close_fds=True, encoding="utf-8")
         
-        success = False
+        que = queue.Queue()
+        threading.Thread(target=self.drain_process_output, args=(p, que), daemon=True).start()
+        try:
+            success = que.get(timeout=10)
+            return success
+        except queue.Empty:
+            logger.warning("WDA launch timeout 10s")
+            p.kill()
+            return False
+
+    def drain_process_output(self, p: subprocess.Popen, msg_queue: queue.Queue):
         deadline = time.time() + 10
+        lines = []
         while time.time() < deadline:
             if p.poll() is not None:
-                logger.warning("xctest exit, output: %s", p.stdout.read())
-                return False
+                logger.warning("xctest exited, output --.\n %s", "\n".join(lines)) # p.stdout.read())
+                msg_queue.put(False)
+                return
             line = p.stdout.readline().strip()
+            lines.append(line)
             # logger.info("%s", line)
             if "WebDriverAgent start successfully" in line:
                 logger.info("WDA started")
-                success = True
+                msg_queue.put(True)
                 break
-
-        def drain_stdout():
-            while p.stdout.read() != "":
-                pass
         
-        if success:
-            threading.Thread(target=drain_stdout, daemon=True).start()
-            atexit.register(p.kill)
-        return success
+        atexit.register(p.kill)
+        while p.stdout.read() != "":
+            pass
+
 
 class AppiumClient(CommonClient):
     """
