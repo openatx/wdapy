@@ -4,3 +4,4 @@ Pillow
 logzero
 cached-property
 simplejson
+retry

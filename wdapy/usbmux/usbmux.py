@@ -157,7 +157,8 @@ class Usbmux:
         }
         data = self.send_recv(payload)
         _devices = [item['Properties'] for item in data['DeviceList']]
-        return [d for d in _devices if d['ConnectionType'] == 'USB']
+        # ConnectionType: USB or Network
+        return [d for d in _devices]
 
     def get_single_device_udid(self) -> str:
         """ to run this function, there must be only one device connected

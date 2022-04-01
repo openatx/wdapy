@@ -13,7 +13,9 @@ class WDASessionDoesNotExist(WDAException):
     """ Session does not exist """
 
 
-class ApiError(WDAException):
-    def __init__(self, error: str, message: str):
-        self.error = error
-        self.message = message
+class ApiError(RequestError):
+    """ request error, but with formated data """
+
+
+class WDAFatalError(RequestError):
+    """ unrecoverable error """

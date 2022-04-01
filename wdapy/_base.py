@@ -5,69 +5,18 @@
 """
 
 import functools
+import logging
 import typing
 
 import requests
 import simplejson as json
+from retry import retry
 
 from ._logger import logger
 from ._proto import *
 from ._types import Recover, StatusInfo
 from .exceptions import *
 from .usbmux import MuxError, requests_usbmux
-
-
-class HTTPResponse:
-    def __init__(self, resp: requests.Response, err: requests.RequestException):
-        self._response: requests.Response = resp
-        self._error: typing.Optional[Exception] = err
-
-    @property
-    def status_code(self) -> int:
-        if self._response is None:
-            return None
-        return self._response.status_code
-
-    def is_success(self) -> bool:
-        return self._error is None and self.status_code == 200
-    
-    def raise_if_session_error(self):
-        """
-        Raises:
-            WDASessionDoesNotExist
-        """
-        if self._error and "Session does not exist" in str(self._error):
-            raise WDASessionDoesNotExist(self._error)
-
-    def should_call_recover(self) -> bool:
-        """
-        Only return true when WDA is no response or can not connected
-        """
-        if isinstance(self._error, MuxError):
-            return True
-        elif self.status_code is None:
-            return True
-        return False
-        
-    def json(self) -> dict:
-        assert self._response is not None
-        try:
-            return self._response.json()
-        except json.JSONDecodeError:
-            return RequestError("JSON decode error", self._response.text)
-
-    def get_error_message(self) -> str:
-        if self._response is not None:
-            message = self._response.text
-        else:
-            message = f"{self._error}"
-        return f"{message} status_code:{self.status_code}"
-
-    def raise_if_failed(self):
-        if self._error:
-            raise RequestError("HTTP request error", self._error)
-        if self.status_code != 200:
-            raise RequestError(self.status_code, self._response.text)
 
 
 class BaseClient:
@@ -145,23 +94,19 @@ class BaseClient:
 
     def request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
         """
+        Raises:
+            RequestError, WDASessionDoesNotExist
         """
         full_url = self._wda_url.rstrip("/") + "/" + urlpath.lstrip("/")
         payload_debug = payload or ""
         logger.debug("$ %s", f"curl -X{method} --max-time {self.request_timeout:d} {full_url} -d {payload_debug!r}")
         
-        resp = self._request_with_error(method, full_url, payload)
-        resp.raise_if_session_error()
+        resp = self._request_http(method, full_url, payload)
+        try:
+            short_json = resp.json().copy()
+        except json.JSONDecodeError:
+            raise RequestError("response is not json format", resp.text)
 
-        if resp.should_call_recover():
-            if self._recover:
-                if not self._recover.recover():
-                    raise RequestError(
-                        "recover failed", resp.get_error_message())
-            resp = self._request_with_error(method, full_url, payload)
-        resp.raise_if_failed()
-
-        short_json = resp.json().copy()
         for k, v in short_json.items():
             if isinstance(v, str) and len(v) > 40:
                 v = v[:20] + "... skip ..." + v[-10:]
@@ -170,21 +115,35 @@ class BaseClient:
 
         value = resp.json().get("value")
         if value and isinstance(value, dict) and value.get("error"):
-            raise ApiError(value["error"], value.get("message"))
+            raise ApiError(resp.status_code, value["error"], value.get("message"))
 
         return resp.json()
 
-    def _request_with_error(self, method: RequestMethod, url: str, payload: dict, **kwargs) -> HTTPResponse:
+    @retry(RequestError, tries=2, delay=0.2, jitter=0.1, logger=logging)
+    def _request_http(self, method: RequestMethod, url: str, payload: dict, **kwargs) -> requests.Response:
+        """
+        Raises:
+            RequestError, WDAFatalError
+            WDASessionDoesNotExist
+        """
         session = self._requests_session_pool_get()
-        _request = functools.partial(
-            session.request, method, url, json=payload, timeout=self.request_timeout)
+        if "timeout" not in kwargs:
+            kwargs["timeout"] = self.request_timeout
         try:
-            resp = _request(**kwargs)
-            return HTTPResponse(resp, None)
-        except requests.RequestException as err:
-            return HTTPResponse(err.response, err)
-        except MuxError as err:
-            return HTTPResponse(requests.Response(), err)
+            resp = session.request(method, url, json=payload, timeout=self.request_timeout)
+            if resp.status_code == 200:
+                return resp
+            else:
+                # handle unexpected response
+                if "Session does not exist" in resp.text:
+                    raise WDASessionDoesNotExist(resp.text)
+                else:
+                    raise RequestError(resp.text)
+        except (requests.RequestException, MuxError) as err:
+            if self._recover:
+                if not self._recover.recover():
+                    raise WDAFatalError("recover failed", err)
+            raise RequestError("ConnectionBroken", err)
 
     @functools.lru_cache(1024)
     def _requests_session_pool_get(self) -> requests.Session:
