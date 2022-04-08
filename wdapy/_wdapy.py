@@ -294,10 +294,10 @@ class XCUITestRecover(Recover):
         que = queue.Queue()
         threading.Thread(target=self.drain_process_output, args=(p, que), daemon=True).start()
         try:
-            success = que.get(timeout=10)
+            success = que.get(timeout=20)
             return success
         except queue.Empty:
-            logger.warning("WDA launch timeout 10s")
+            logger.warning("WDA launch timeout 20s")
             p.kill()
             return False
 
@@ -317,7 +317,7 @@ class XCUITestRecover(Recover):
                 msg_queue.put(True)
                 break
         
-        atexit.register(p.kill)
+        atexit.register(p.terminate)
         while p.stdout.read() != "":
             pass
 
