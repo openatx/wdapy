@@ -5,7 +5,7 @@ import enum
 
 NAME = "wdapy"
 DEFAULT_WDA_URL = "http://localhost:8100"
-DEFAULT_HTTP_TIMEOUT = 60
+DEFAULT_HTTP_TIMEOUT = 90
 
 
 class RequestMethod(str, enum.Enum):
