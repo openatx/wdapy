@@ -70,9 +70,11 @@ class CommonClient(BaseClient):
         else:
             setup_logger(NAME, level=logging.INFO)
 
-    def app_start(self, bundle_id: str):
+    def app_start(self, bundle_id: str, arguments: typing.List[str] = [], environment: typing.Dict[str, str] = {}):
         self.session_request(POST, "/wda/apps/launch", {
-            "bundleId": bundle_id
+            "bundleId": bundle_id,
+            "arguments": arguments,
+            "environment": environment,
         })
 
     def app_terminate(self, bundle_id: str):
