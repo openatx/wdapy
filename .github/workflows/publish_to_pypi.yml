@@ -15,10 +15,11 @@ jobs:
     - name: Install requirements
       run: |
         pip3 install -e .
-        pip3 install pytest
+        pip3 install pytest coverage
     - name: Run UnitTest
       run: |
-        py.test -vv tests/
+        python3 -m coverage run -m pytest -vv tests/
+        python3 -m coverage xml --include "wdapy/**"
     - name: Install pypa/build and Build targz and wheel
       run: |
         python3 -m pip install wheel

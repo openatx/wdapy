@@ -127,6 +127,12 @@ class SimpleTest(unittest.TestCase):
         self._client.press(wdapy.Keycode.HOME)
         payload = self._client.session_request.call_args.args[-1]
         self.assertEqual(wdapy.Keycode.HOME, payload['name'])
+    
+    def test_keyboard_dismiss(self):
+        self._client.session_request = MagicMock(return_value={"value": None})
+        self._client.keyboard_dismiss(["Done"])
+        payload = self._client.session_request.call_args.args[-1]
+        self.assertEqual(["Done"], payload['keyNames'])
 
 
 if __name__ == "__main__":

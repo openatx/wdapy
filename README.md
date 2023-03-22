@@ -100,8 +100,15 @@ print(c.sourcetree())
 c.press_duration(name="power_plus_home", duration=1) #take a screenshot
 # todo, need to add more method
 
+c.volume_up()
+c.volume_down()
+
 # tap x:100, y:200
 c.tap(100, 200)
+
+# dismiss keyboard
+# by tap keyboard button to dismiss, default keyNames are ["前往", "发送", "Send", "Done", "Return"]
+c.keyboard_dismiss(["Done", "Return"])
 ```
 
 ## How to contribute

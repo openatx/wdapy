@@ -1,0 +1,20 @@
+[run]
+branch = True
+
+omit = 
+	**/wdapy/usbmux/**
+	
+[report]
+ignore_errors = True
+
+exclude_lines =
+	pragma: no cover
+	if self.debug:
+	if settings.DEBUG
+	if 0:
+	raise NotImplementedError
+	^(from|import) .*
+	^"""
+	@abc.abstractmethod
+	def __repr__
+	class .*(enum\.Enum|StrEnum).*:$

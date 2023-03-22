@@ -240,6 +240,12 @@ class CommonClient(BaseClient):
         }
         return self.session_request(POST, "/wda/performIoHidEvent", payload)
 
+    def volume_up(self):
+        self.press(Keycode.VOLUME_UP)
+    
+    def volume_down(self):
+        self.press(Keycode.VOLUME_DOWN)
+
     @cached_property
     def scale(self) -> int:
         # Response example
@@ -272,7 +278,15 @@ class CommonClient(BaseClient):
     def device_info(self) -> DeviceInfo:
         data = self.session_request(GET, "/wda/device/info")["value"]
         return DeviceInfo.value_of(data)
+    
+    def keyboard_dismiss(self, key_names: typing.List[str] = ["前往", "发送", "Send", "Done", "Return"]):
+        """ dismiss keyboard
+        相当于通过点击键盘上的按钮来关闭键盘
 
+        Args:
+            key_names: list of keys to tap to dismiss keyboard
+        """
+        self.session_request(POST, "/wda/keyboard/dismiss", {"keyNames": key_names})
 
 
 class XCUITestRecover(Recover):
