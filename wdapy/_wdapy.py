@@ -372,7 +372,7 @@ class NanoClient(AppiumClient):
             "y": y,
         })
 
-    def swipe(self,
+    def fast_swipe(self,
               from_x: int,
               from_y: int,
               to_x: int,
