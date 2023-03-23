@@ -378,7 +378,7 @@ class NanoClient(AppiumClient):
               to_x: int,
               to_y: int,
               duration: float = .5):
-        """ fast swipe """
+        """ fast swipe, this method can not simulate back action by swipe left to right """
         self.request(POST, "/wda/swipe", {
             "x1": from_x,
             "y1": from_y,
