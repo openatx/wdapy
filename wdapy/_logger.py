@@ -5,7 +5,7 @@
 """
 
 import logging
-from ._proto import NAME
+from wdapy._proto import NAME
 from logzero import setup_logger
 
 logger = setup_logger(NAME, level=logging.INFO)

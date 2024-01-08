@@ -39,3 +39,18 @@ class Keycode(str, enum.Enum):
     POWER = "power"
     SNAPSHOT = "snapshot"
     POWER_PLUS_HOME = "power_plus_home"
+
+
+class GestureAction(str, enum.Enum):
+    TAP = "tap"
+    PRESS = "press"
+    MOVE_TO = "moveTo"
+    WAIT = "wait"
+    RELEASE = "release"
+
+
+class BatteryState(enum.IntEnum):
+    Unknown = 0
+    Unplugged = 1
+    Charging = 2
+    Full = 3

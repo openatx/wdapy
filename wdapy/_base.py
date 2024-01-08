@@ -12,11 +12,11 @@ import requests
 import simplejson as json
 from retry import retry
 
-from ._logger import logger
-from ._proto import *
-from ._types import Recover, StatusInfo
-from .exceptions import *
-from .usbmux import MuxError, requests_usbmux
+from wdapy._logger import logger
+from wdapy._proto import *
+from wdapy._types import Recover, StatusInfo
+from wdapy.exceptions import *
+from wdapy.usbmux import MuxError, requests_usbmux
 
 
 class BaseClient:

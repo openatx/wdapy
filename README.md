@@ -106,6 +106,13 @@ c.volume_down()
 # tap x:100, y:200
 c.tap(100, 200)
 
+from wdapy import Gesture, GestureOption as Option
+c.touch_perform([
+    Gesture("press", Option(x=100, y=200)),
+    Gesture("wait", Option(ms=100)), # ms shoud > 17
+    Gesture("moveTo", Option(x=100, y = 100)),
+    Gesture("release")
+])
 # dismiss keyboard
 # by tap keyboard button to dismiss, default keyNames are ["前往", "发送", "Send", "Done", "Return"]
 c.keyboard_dismiss(["Done", "Return"])

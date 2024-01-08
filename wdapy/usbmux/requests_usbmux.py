@@ -9,7 +9,7 @@ import requests
 import urllib3
 from requests.adapters import HTTPAdapter
 
-from . import usbmux
+from wdapy.usbmux import usbmux
 
 try:
     import http.client as httplib

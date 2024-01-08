@@ -3,6 +3,7 @@
 
 from ._wdapy import (AppiumClient, AppiumUSBClient, NanoClient, NanoUSBClient)
 
-from . import exceptions
-from . import _types as types
-from ._proto import *
+from wdapy import exceptions
+from wdapy import _types as types
+from wdapy._proto import *
+from wdapy._types import *

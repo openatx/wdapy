@@ -1,12 +1,17 @@
 # coding: utf-8
 #
+__all__ = ["Recover", "StatusInfo", "AppInfo", "DeviceInfo", "BatteryInfo", "SourceTree",
+           "StatusBarSize", "AppList",
+           "Gesture", "GestureOption", "GestureAction"]
 
-__all__ = ["Recover", "StatusInfo", "AppInfo", "DeviceInfo", "BatteryInfo", "SourceTree", "StatusBarSize", "AppList"]
-
+import abc
 import enum
 import typing
-import abc
-from ._utils import camel_to_snake
+from dataclasses import dataclass
+from typing import Optional, Union
+
+from wdapy._proto import *
+from wdapy._utils import camel_to_snake
 
 
 def smart_value_of(obj, data: dict):
@@ -76,13 +81,6 @@ class DeviceInfo(_Base):
     is_simulator: bool
 
 
-class BatteryState(enum.IntEnum):
-    Unknown = 0
-    Unplugged = 1
-    Charging = 2
-    Full = 3
-
-
 class BatteryInfo(_Base):
     level: float
     state: BatteryState
@@ -109,5 +107,17 @@ class AppList(_Base):
     bundle_id: str
 
 
+@dataclass
+class GestureOption:
+    element: Optional[str] = None
+    x: Optional[int] = None
+    y: Optional[int] = None
+    count: Optional[int] = None
+    ms: Optional[int] = None # action:wait duration
 
+
+@dataclass
+class Gesture:
+    action: Union[str, GestureAction]
+    options: Optional[Union[dict, GestureOption]] = None
 

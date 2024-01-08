@@ -1,5 +1,7 @@
 # coding: utf-8
 
+from __future__ import annotations
+
 import atexit
 import base64
 import io
@@ -17,13 +19,14 @@ from cached_property import cached_property
 from logzero import setup_logger
 from PIL import Image
 
-from ._alert import Alert
-from ._base import BaseClient
-from ._logger import logger
-from ._proto import *
-from ._types import *
-from .exceptions import *
-from .usbmux import requests_usbmux, usbmux
+from wdapy._alert import Alert
+from wdapy._base import BaseClient
+from wdapy._logger import logger
+from wdapy._proto import *
+from wdapy._types import *
+from wdapy.exceptions import *
+from wdapy._utils import omit_empty
+from wdapy.usbmux import requests_usbmux, usbmux
 
 
 class HTTPResponse:
@@ -239,6 +242,17 @@ class CommonClient(BaseClient):
             "duration": duration
         }
         return self.session_request(POST, "/wda/performIoHidEvent", payload)
+    
+    def touch_perform(self, gestures: list[Gesture]):
+        """ perform touch actions
+
+        Ref:
+            https://appium.readthedocs.io/en/latest/en/commands/interactions/touch/touch-perform/
+        """
+        payload = {
+            "actions": omit_empty(gestures)
+        }
+        self.session_request(POST, "/wda/touch/perform", payload)
 
     def volume_up(self):
         self.press(Keycode.VOLUME_UP)
