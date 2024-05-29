@@ -5,7 +5,6 @@ from __future__ import annotations
 import atexit
 import base64
 import io
-import json
 import logging
 import queue
 import subprocess
@@ -14,7 +13,6 @@ import threading
 import time
 import typing
 
-import requests
 from functools import cached_property
 from logzero import setup_logger
 from PIL import Image
@@ -25,34 +23,8 @@ from wdapy._proto import *
 from wdapy._types import *
 from wdapy.exceptions import *
 from wdapy._utils import omit_empty
-from wdapy.usbmux.pyusbmux import list_devices, select_device
+from wdapy.usbmux.pyusbmux import list_devices
 
-
-class HTTPResponse:
-    def __init__(self, resp: requests.Response, err: requests.RequestException):
-        self._resp = resp
-        self._err = err
-
-    def is_success(self) -> bool:
-        return self._err is None and self._resp.status_code == 200
-
-    def json(self) -> dict:
-        assert self._resp is not None
-        try:
-            return self._resp.json()
-        except json.JSONDecodeError:
-            return RequestError("JSON decode error", self._resp.text)
-
-    def get_error_message(self) -> str:
-        if self._resp:
-            return self._resp.text
-        return str(self._err)
-
-    def raise_if_failed(self):
-        if self._err:
-            raise RequestError("HTTP request error", self._err)
-        if self._resp.status_code != 200:
-            raise RequestError(self._resp.status_code, self._resp.text)
 
 
 class CommonClient(BaseClient):

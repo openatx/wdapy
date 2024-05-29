@@ -8,7 +8,6 @@ from http.client import HTTPConnection, HTTPSConnection
 import logging
 import typing
 
-import requests
 import json
 from retry import retry
 from urllib.parse import urlparse
@@ -153,7 +152,7 @@ class BaseClient:
         return resp.json()
 
     @retry(RequestError, tries=2, delay=0.2, jitter=0.1, logger=logging)
-    def _request_http(self, method: RequestMethod, url: str, payload: dict, **kwargs) -> requests.Response:
+    def _request_http(self, method: RequestMethod, url: str, payload: dict, **kwargs) -> HTTPResponseWrapper:
         """
         Raises:
             RequestError, WDAFatalError
