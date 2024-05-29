@@ -5,7 +5,6 @@ from __future__ import annotations
 import atexit
 import base64
 import io
-import logging
 import queue
 import subprocess
 import sys
@@ -14,7 +13,6 @@ import time
 import typing
 
 from functools import cached_property
-from logzero import setup_logger
 from PIL import Image
 
 from wdapy._alert import Alert
@@ -39,10 +37,7 @@ class CommonClient(BaseClient):
 
     @debug.setter
     def debug(self, v: bool):
-        if v:
-            setup_logger(NAME)
-        else:
-            setup_logger(NAME, level=logging.INFO)
+        self.__debug = v
 
     def app_start(self, bundle_id: str, arguments: typing.List[str] = [], environment: typing.Dict[str, str] = {}):
         self.session_request(POST, "/wda/apps/launch", {
