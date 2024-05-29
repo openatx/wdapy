@@ -4,19 +4,52 @@
 """Created on Tue Sep 14 2021 15:26:27 by codeskyblue
 """
 
-import functools
+from http.client import HTTPConnection, HTTPSConnection
 import logging
 import typing
 
 import requests
-import simplejson as json
+import json
 from retry import retry
+from urllib.parse import urlparse
 
-from wdapy._logger import logger
 from wdapy._proto import *
 from wdapy._types import Recover, StatusInfo
 from wdapy.exceptions import *
-from wdapy.usbmux import MuxError, requests_usbmux
+from wdapy.usbmux.exceptions import MuxConnectError
+from wdapy.usbmux.pyusbmux import select_device
+
+
+logger = logging.getLogger(__name__)
+
+class HTTPResponseWrapper:
+    def __init__(self, content: bytes, status_code: int):
+        self.content = content
+        self.status_code = status_code
+    
+    def json(self):
+        return json.loads(self.content)
+
+    @property
+    def text(self) -> str:
+        return self.content.decode("utf-8")
+
+    def getcode(self) -> int:
+        return self.status_code
+
+
+def http_create(url: str) -> typing.Union[HTTPConnection, HTTPSConnection]:
+    u = urlparse(url)
+    if u.scheme == "http+usbmux":
+        udid, device_wda_port = u.netloc.split(":")
+        device = select_device(udid)
+        return device.make_http_connection(int(device_wda_port))
+    elif u.scheme == "http":
+        return HTTPConnection(u.netloc)
+    elif u.scheme == "https":
+        return HTTPSConnection(u.netloc)
+    else:
+        raise ValueError(f"unknown scheme: {u.scheme}")
 
 
 class BaseClient:
@@ -126,26 +159,34 @@ class BaseClient:
             RequestError, WDAFatalError
             WDASessionDoesNotExist
         """
-        session = self._requests_session_pool_get()
-        if "timeout" not in kwargs:
-            kwargs["timeout"] = self.request_timeout
+        logger.info("request: %s %s %s", method, url, payload)
         try:
-            resp = session.request(method, url, json=payload, timeout=self.request_timeout)
-            if resp.status_code == 200:
+            conn = http_create(url)
+            conn.timeout = kwargs.get("timeout", self.request_timeout)
+            u = urlparse(url)
+            urlpath = url[len(u.scheme) + len(u.netloc) + 3:]
+
+            if not payload:
+                conn.request(method.value, urlpath)
+            else:
+                conn.request(method.value, urlpath, json.dumps(payload), headers={"Content-Type": "application/json"})
+            response = conn.getresponse()
+            content = bytearray()
+            while chunk := response.read(4096):
+                content.extend(chunk)
+            resp = HTTPResponseWrapper(content, response.status)
+
+            if response.getcode() == 200:
                 return resp
             else:
                 # handle unexpected response
                 if "Session does not exist" in resp.text:
                     raise WDASessionDoesNotExist(resp.text)
                 else:
-                    raise RequestError(resp.text)
-        except (requests.RequestException, MuxError) as err:
+                    raise RequestError(f"response code: {response.getcode()}", resp.text)
+        except MuxConnectError as err:
             if self._recover:
                 if not self._recover.recover():
-                    raise WDAFatalError("recover failed", err)
+                    raise WDAFatalError("recover failed")
             raise RequestError("ConnectionBroken", err)
-
-    @functools.lru_cache(1024)
-    def _requests_session_pool_get(self) -> requests.Session:
-        return requests_usbmux.Session()
 

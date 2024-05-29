@@ -4,12 +4,13 @@
 """Created on Tue Sep 14 2021 15:24:46 by codeskyblue
 """
 
+import logging
 import typing
 from wdapy.exceptions import RequestError
 from wdapy._proto import *
 from wdapy._base import BaseClient
-from wdapy._logger import logger
 
+logger = logging.getLogger(__name__)
 
 class Alert:
     def __init__(self, client: BaseClient):

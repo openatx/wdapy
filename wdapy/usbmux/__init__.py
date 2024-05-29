@@ -4,4 +4,4 @@
 """Created on Thu Dec 09 2021 09:56:30 by codeskyblue
 """
 
-from wdapy.usbmux.usbmux import MuxError, MuxConnectError
+from wdapy.usbmux.exceptions import MuxError, MuxConnectError

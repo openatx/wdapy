@@ -15,18 +15,17 @@ import time
 import typing
 
 import requests
-from cached_property import cached_property
+from functools import cached_property
 from logzero import setup_logger
 from PIL import Image
 
 from wdapy._alert import Alert
 from wdapy._base import BaseClient
-from wdapy._logger import logger
 from wdapy._proto import *
 from wdapy._types import *
 from wdapy.exceptions import *
 from wdapy._utils import omit_empty
-from wdapy.usbmux import requests_usbmux, usbmux
+from wdapy.usbmux.pyusbmux import list_devices, select_device
 
 
 class HTTPResponse:
@@ -193,7 +192,10 @@ class CommonClient(BaseClient):
         self.session_request(POST, "/wda/keys", {"value": list(value)})
 
     def tap(self, x: int, y: int):
-        self.session_request(POST, "/wda/tap/0", {"x": x, "y": y})
+        try:
+            self.session_request(POST, "/wda/tap", {"x": x, "y": y})
+        except RequestError:
+            self.session_request(POST, "/wda/tap/0", {"x": x, "y": y})
     
     def touch_and_hold(self, x: int, y: int, duration: float):
         """ touch and hold
@@ -361,12 +363,20 @@ class AppiumClient(CommonClient):
         super().__init__(wda_url)
 
 
+def get_single_device_udid() -> str:
+    devices = list_devices()
+    if len(devices) == 0:
+        raise WDAException("No device connected")
+    if len(devices) > 1:
+        raise WDAException("More than one device connected")
+    return devices[0].serial
+
+
 class AppiumUSBClient(AppiumClient):
     def __init__(self, udid: str = None, port: int = 8100):
         if udid is None:
-            _usbmux = usbmux.Usbmux()
-            udid = _usbmux.get_single_device_udid()
-        super().__init__(requests_usbmux.DEFAULT_SCHEME+udid+f":{port}")
+            udid = get_single_device_udid()
+        super().__init__(f"http+usbmux://{udid}:{port}")
         self.set_recover_handler(XCUITestRecover(udid))
 
 
@@ -404,7 +414,6 @@ class NanoClient(AppiumClient):
 class NanoUSBClient(NanoClient):
     def __init__(self, udid: str = None, port: int = 8100):
         if udid is None:
-            _usbmux = usbmux.Usbmux()
-            udid = _usbmux.get_single_device_udid()
-        super().__init__(requests_usbmux.DEFAULT_SCHEME+udid+f":{port}")
+            udid = get_single_device_udid()
+        super().__init__(f"http+usbmux://{udid}:{port}")
         self.set_recover_handler(XCUITestRecover(udid))
