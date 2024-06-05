@@ -5,6 +5,7 @@ from __future__ import annotations
 import atexit
 import base64
 import io
+import logging
 import queue
 import subprocess
 import sys
@@ -24,6 +25,7 @@ from wdapy._utils import omit_empty
 from wdapy.usbmux.pyusbmux import list_devices
 
 
+logger = logging.getLogger(__name__)
 
 class CommonClient(BaseClient):
     def __init__(self, wda_url: str):
