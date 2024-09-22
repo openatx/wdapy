@@ -369,23 +369,29 @@ class PlistMuxConnection(BinaryMuxConnection):
     def get_device_list(self, timeout: float = None) -> None:
         """ get device list synchronously without waiting the timeout """
         self.devices = []
-        self._send({'MessageType': 'ListDevices'})
-        #
-        # FIXME(ssx): check ReusltCode == 4294957295
-        #
-        result = self._receive(self._tag - 1)
-        if result['ResultCode'] == 4294957295:
-            return super().get_device_list(timeout)
-        # check other resultCode
-        #self._assert_result(result)
-        for response in result['DeviceList']:
-            if response['MessageType'] == 'Attached':
-                super()._add_device(MuxDevice(response['DeviceID'], response['Properties']['SerialNumber'],
-                                              response['Properties']['ConnectionType']))
-            elif response['MessageType'] == 'Detached':
-                super()._remove_device(response['DeviceID'])
-            else:
-                raise MuxError(f'Invalid packet type received: {response}')
+        self._send_receive({'MessageType': 'Listen'})
+        end = time.time() + timeout
+        self._sock.settimeout(timeout)
+        while time.time() < end:
+            try:
+                response = self._receive()
+                if response['MessageType'] == 'Attached':
+                    super()._add_device(MuxDevice(response['DeviceID'], response['Properties']['SerialNumber'],
+                                                response['Properties']['ConnectionType']))
+                elif response['MessageType'] == 'Detached':
+                    super()._remove_device(response['DeviceID'])
+                else:
+                    raise MuxError(f'Invalid packet type received: {response}')
+            except (BlockingIOError, StreamError):
+                continue
+            except IOError:
+                try:
+                    self._sock.setblocking(True)
+                    self.close()
+                except OSError:
+                    pass
+                raise MuxError('Exception in listener socket')
+        
 
     def get_buid(self) -> str:
         """ get SystemBUID """
