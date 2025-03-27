@@ -314,7 +314,7 @@ class BinaryMuxConnection(MuxConnection):
         self._sock.send(usbmuxd_request.build(data))
         self._tag += 1
 
-    def _receive(self, expected_tag: int = None):
+    def _receive(self, expected_tag: Optional[int] = None):
         self._assert_not_connected()
         response = usbmuxd_response.parse_stream(self._sock)
         if expected_tag and response.header.tag != expected_tag:
@@ -403,7 +403,7 @@ class PlistMuxConnection(BinaryMuxConnection):
                        'data': plistlib.dumps(request),
                        })
 
-    def _receive(self, expected_tag: int = None) -> Mapping:
+    def _receive(self, expected_tag: Optional[int] = None) -> Mapping:
         response = super()._receive(expected_tag=expected_tag)
         if response.header.message != usbmuxd_msgtype.PLIST:
             raise MuxError(f'Received non-plist type {response}')
@@ -430,7 +430,7 @@ def list_devices(usbmux_address: Optional[str] = None) -> List[MuxDevice]:
     return devices
 
 
-def select_device(udid: str = None, connection_type: str = None, usbmux_address: Optional[str] = None) \
+def select_device(udid: Optional[str] = None, connection_type: Optional[str] = None, usbmux_address: Optional[str] = None) \
         -> Optional[MuxDevice]:
     """
     select a UsbMux device according to given arguments.

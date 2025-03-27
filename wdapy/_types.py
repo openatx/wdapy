@@ -1,8 +1,7 @@
 # coding: utf-8
 #
 __all__ = ["Recover", "StatusInfo", "AppInfo", "DeviceInfo", "BatteryInfo", "SourceTree",
-           "StatusBarSize", "AppList",
-           "Gesture", "GestureOption", "GestureAction"]
+           "StatusBarSize", "AppList"]
 
 import abc
 import enum
@@ -105,19 +104,3 @@ class StatusBarSize(_Base):
 class AppList(_Base):
     pid: int
     bundle_id: str
-
-
-@dataclass
-class GestureOption:
-    element: Optional[str] = None
-    x: Optional[int] = None
-    y: Optional[int] = None
-    count: Optional[int] = None
-    ms: Optional[int] = None # action:wait duration
-
-
-@dataclass
-class Gesture:
-    action: Union[str, GestureAction]
-    options: Optional[Union[dict, GestureOption]] = None
-

@@ -7,8 +7,7 @@ from wdapy._types import *
 
 def test_camel_to_snake():
     assert "this_is_my_string" == camel_to_snake("ThisIsMyString")
-
-
+    
 
 def test_json_dumps_omit_empty():
     # Test with a mix of None and non-None values
@@ -23,16 +22,6 @@ def test_json_dumps_omit_empty():
         }]
     }
     expected_json = '{"a": 1, "c": "test", "d": [1, 2, 3], "e": [{"f": 1}]}'
-    assert json_dumps_omit_empty(data) == expected_json
-
-    data = [Gesture(
-        action=GestureAction.TAP,
-        options=GestureOption(
-            x=100,
-            y=200
-        )
-    )]
-    expected_json = '[{"action": "tap", "options": {"x": 100, "y": 200}}]'
     assert json_dumps_omit_empty(data) == expected_json
     
     # Test with all values as None

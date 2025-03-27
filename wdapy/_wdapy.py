@@ -13,6 +13,7 @@ import threading
 import time
 import typing
 
+from typing import Optional
 from functools import cached_property
 from PIL import Image
 
@@ -20,8 +21,10 @@ from wdapy._alert import Alert
 from wdapy._base import BaseClient
 from wdapy._proto import *
 from wdapy._types import *
-from wdapy.exceptions import *
 from wdapy._utils import omit_empty
+
+from wdapy.exceptions import *
+from wdapy.actions import TouchActionsClient
 from wdapy.usbmux.pyusbmux import list_devices
 
 
@@ -31,15 +34,6 @@ class CommonClient(BaseClient):
     def __init__(self, wda_url: str):
         super().__init__(wda_url)
         self.__ui_size = None
-        self.__debug = False
-
-    @property
-    def debug(self) -> bool:
-        return self.__debug
-
-    @debug.setter
-    def debug(self, v: bool):
-        self.__debug = v
 
     def app_start(self, bundle_id: str, arguments: typing.List[str] = [], environment: typing.Dict[str, str] = {}):
         self.session_request(POST, "/wda/apps/launch", {
@@ -214,17 +208,6 @@ class CommonClient(BaseClient):
         }
         return self.session_request(POST, "/wda/performIoHidEvent", payload)
     
-    def touch_perform(self, gestures: list[Gesture]):
-        """ perform touch actions
-
-        Ref:
-            https://appium.readthedocs.io/en/latest/en/commands/interactions/touch/touch-perform/
-        """
-        payload = {
-            "actions": omit_empty(gestures)
-        }
-        self.session_request(POST, "/wda/touch/perform", payload)
-
     def volume_up(self):
         self.press(Keycode.VOLUME_UP)
     
@@ -323,7 +306,7 @@ class XCUITestRecover(Recover):
             pass
 
 
-class AppiumClient(CommonClient):
+class AppiumClient(CommonClient, TouchActionsClient):
     """
     client for https://github.com/appium/WebDriverAgent
     """
@@ -342,7 +325,7 @@ def get_single_device_udid() -> str:
 
 
 class AppiumUSBClient(AppiumClient):
-    def __init__(self, udid: str = None, port: int = 8100):
+    def __init__(self, udid: Optional[str] = None, port: int = 8100):
         if udid is None:
             udid = get_single_device_udid()
         super().__init__(f"http+usbmux://{udid}:{port}")
@@ -381,7 +364,7 @@ class NanoClient(AppiumClient):
 
 
 class NanoUSBClient(NanoClient):
-    def __init__(self, udid: str = None, port: int = 8100):
+    def __init__(self, udid: Optional[str] = None, port: int = 8100):
         if udid is None:
             udid = get_single_device_udid()
         super().__init__(f"http+usbmux://{udid}:{port}")

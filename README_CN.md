@@ -1,81 +1,176 @@
 # wdapy
 [![PyPI](https://img.shields.io/pypi/v/wdapy?color=blue)](https://pypi.org/project/wdapy/)
 
-[English Version](README.md)
+[English](README.md)
 
-## 背景
-为什么有了 <https://github.com/openatx/facebook-wda> 这个项目了，还要再重写一个项目呢。有几个原因
+遵循 <https://github.com/appium/WebDriverAgent/blob/master/CHANGELOG.md> 中的 WDA API
 
-1. pypi上注册的是facebook-wda这个项目，但是pypi上还有一个wda项目，名叫wda项目的代码太老，经常会导致使用者安装错误。
-2. facebook-wda这个项目，一开始的初衷很简单就是写一个Python的库，来方便使用facebook开发的这个WebDriverAgent。没成想，facebook自己先不管WebDriverAgent这个项目了。然后就有很多人fork了这个项目。最出名的应该是appium的fork版本，不过还有很多人自己fork了改进的。这可能就不会有一个标准的wda库了。既要兼容这个，又要兼容那个，导致项目中的代码打了很多补丁，目前看起来真的好丑。
-3. facebook-wda这个项目是从python2开始搞的，并没有加入很多的type hint. 导致自动补全的项目不太好。
-4. facebook-wda用的人太多了点，然而有些接口我真的是不想要了。删了的话，肯定免不了很多麻烦。既然删不了，那还不如从新开始呢。
+## 环境要求
+Python 3.7+
 
-那这个wdapy有什么新的特性呢。
-
-1. 发布到pypi的项目名和github上的项目名一致，避免歧义
-2. 支持多种版本的WebDriverAgent。所有会有很多的类比如AppiumClient，CodeskyblueClient。这些类都继承自一个基类 CommonClient。一些方法可以重写，比如 tap接口
-3. 每个函数都加入自动补全功能。不再是一个dict返回，导致还要看文档才知道返回时啥。另外函数的输入也使用enum进行处理
-4. 暴露WDA启动接口出来。这样就能更灵活的适配各种平台
-5. 使用mock模块写单测。这样就能在travis之类的持续集成平台上跑测试了。
-6. 完善如何贡献代码的文档，有一个标准之后，就可以吸引更多的人加入进来了。另外还会从活跃的用户中选一个合作者进来。这样就算我不在也有人负责bug和feature的跟进。
-
-## 依赖
-Python3.7+
-
-> 运行单元测试依赖3.8+
+> 运行单元测试需要 Python 3.8+
 
 ## 安装
 ```bash
 pip3 install wdapy
+
+# 可选
+# 当 WDA 无响应时，支持使用 tidevice 启动 WDA
+pip3 install tidevice[openssl]
 ```
 
-## 使用
+## 使用方法
 
+创建客户端实例
 ```python
 import wdapy
 
+# 基于项目: https://github.com/appium/WebDriverAgent
 c = wdapy.AppiumClient()
-st = c.status()
-print(st.ip)
+# 或者
+c = wdapy.AppiumClient("http://localhost:8100")
+# 或者
+c = wdapy.AppiumUSBClient("00008101-001234567890ABCDEF")
+# 或者 (仅当只有一台设备连接时有效)
+c = wdapy.AppiumUSBClient()
 
-print(c.scale) # 2 or 3
-print(c.window_size()) # (width, height)
+# 基于项目: https://github.com/codeskyblue/WebDriverAgent
+# 支持快速点击和滑动
+c = wdapy.NanoClient("http://localhost:8100")
+c = wdapy.NanoUSBClient()
+```
 
+调用 WDA 方法
+
+```python
+print(c.request_timeout) # 显示请求超时时间 (默认 120 秒)
+c.request_timeout = 60 # 修改为 60 秒
+
+print(c.scale) # 2 或 3
+print(c.window_size()) # (宽度, 高度)
+print(c.debug) # 输出 True 或 False (默认 False)
+c.debug = True
+
+c.app_start("com.apple.Preferences")
+c.app_terminate("com.apple.stocks")
+c.app_state("com.apple.mobilesafari")
+c.app_list() # 类似 app_current
+
+c.app_current()
+# 输出示例
+# <AppInfo name='', process_arguments={'env': {}, 'args': []}, pid=6170, bundle_id='com.netease.SnailReader'>
+
+# 将当前应用置于后台 2 秒，然后返回前台
+c.deactivate(2.0)
+
+c.alert.exists # 布尔值
+c.alert.buttons()
+c.alert.accept()
+c.alert.dismiss()
+c.alert.click("接受")
+
+c.open_url("https://www.baidu.com")
+
+# 剪贴板功能仅在 WebDriverAgent 应用在前台时有效
+c.app_start("com.facebook.WebDriverAgentRunner.xctrunner")
+c.set_clipboard("foo")
+c.get_clipboard() # 输出: foo
+
+c.is_locked() # 布尔值
+c.unlock()
+c.lock()
+c.homescreen()
+c.shutdown() # 关闭 WebDriverAgent
+
+c.send_keys("foo")
+c.send_keys("\n") # 模拟回车键
+
+# 似乎缺少 c.get_clipboard()
+c.screenshot() # PIL.Image.Image
 c.screenshot().save("screenshot.jpg")
 
-print(c.device_info()) # (timeZone, currentLocation, model and so on)
+c.get_orientation()
+# PORTRAIT | LANDSCAPE (竖屏 | 横屏)
 
-print(c.battery_info()) # (level, state)
+c.window_size() # 宽度, 高度
+print(c.status_barsize) # (宽度, 高度)
+print(c.device_info()) # (时区, 当前位置, 型号等)
+print(c.battery_info()) # (电量, 状态)
 
 print(c.sourcetree())
 
-print(c.status_barsize) # (width, height)
+c.press_duration(name="power_plus_home", duration=1) # 截屏
+# 待添加更多方法
 
-print(c.app_list()) # (pid, bundleId)
+c.volume_up()
+c.volume_down()
 
-c.deactivate(4) # deactivate current app for 4s
+# 点击坐标 x:100, y:200
+c.tap(100, 200)
 
-c.set_clipboard("123")
-
-c.press_duration(name="power_plus_home", duration=1) #take a screenshot
-# todo, need to add more method
+# 关闭键盘
+# 通过点击键盘按钮关闭，默认按钮名称为 ["前往", "发送", "Send", "Done", "Return"]
+c.keyboard_dismiss(["Done", "Return"])
 ```
 
-## 如何参与贡献
+触摸操作
 
-如果你计划新增一个方法进来
+```python
+# 模拟向右滑动，持续 1000 毫秒
+from wdapy.actions import TouchActions, PointerAction
+finger1 = TouchActions.pointer("finger1", actions=[
+    PointerAction.move(200, 300),
+    PointerAction.down(),
+    PointerAction.move(50, 0, duration=1000, origin=Origin.POINTER),
+    # 等同于
+    # PointerAction.move(250, 300, duration=1000, origin=Origin.VIEWPORT),
+    PointerAction.up(),
+])
+c.touch_perform([finger1])
 
-- 第一步先改README文档，将新增加的方法的用法写到其中。
-- 定义的类型放在 _types.py目录中，所有复杂的结构都需要定义一个类型。
-- 在相关文件中（通常来说都是_wdapy.py)增加相应的代码，完成本地的测试
-- 增加完方法之后，需要在tests目录下把单测也写了。
-- 最后在Contributors下面增加自己的名字
+# 模拟两指外扩
+finger2 = TouchActions.pointer("finger2", actions=[
+    PointerAction.move(150, 300),
+    PointerAction.down(),
+    PointerAction.move(-50, 0, duration=1000, origin=Origin.POINTER),
+    PointerAction.up(),
+])
+c.touch_perform([finger1, finger2])
+```
 
-## Contributors
+## 重大变更
+
+在 WDA 7.0 和 wdapy 1.0 中已移除
+
+```
+from wdapy import Gesture, GestureOption as Option
+c.touch_perform([
+    Gesture("press", Option(x=100, y=200)),
+    Gesture("wait", Option(ms=100)), # ms 应大于 17
+    Gesture("moveTo", Option(x=100, y = 100)),
+    Gesture("release")
+])
+```
+
+
+## 如何贡献
+假设你想添加一个新方法
+
+- 第一步，在 README.md 和 README_CN.md 中添加方法用法
+- 在 tests/ 目录下添加单元测试
+- 在 `## 贡献者` 部分添加你的名字
+
+本仓库通过 GitHub Actions 发布。
+代码管理员只需要通过 `git tag $VERSION` 和 `git push --tags` 创建版本
+GitHub Actions 将构建 targz 和 wheel 并发布到 https://pypi.org
+
+## 贡献者
 
 - [codeskyblue](https://github.com/codeskyblue)
 - [justinxiang](https://github.com/Justin-Xiang)
 
-## LICENSE
+## 替代方案
+- https://github.com/openatx/facebook-wda
+
+## 许可证
 [MIT](LICENSE)

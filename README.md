@@ -3,6 +3,10 @@
 
 [中文](README_CN.md)
 
+Follow WDA API written in <https://github.com/appium/WebDriverAgent/blob/master/CHANGELOG.md>
+
+Current WDA: 9.3.3
+
 ## Requires
 Python 3.7+
 
@@ -106,6 +110,44 @@ c.volume_down()
 # tap x:100, y:200
 c.tap(100, 200)
 
+# dismiss keyboard
+# by tap keyboard button to dismiss, default keyNames are ["前往", "发送", "Send", "Done", "Return"]
+c.keyboard_dismiss(["Done", "Return"])
+```
+
+Touch Actions
+
+```python
+# simulate swipe right in 1000ms
+from wdapy.actions import TouchActions, PointerAction
+finger1 = TouchActions.pointer("finger1", actions=[
+    PointerAction.move(200, 300),
+    PointerAction.down(),
+    PointerAction.move(50, 0, duration=1000, origin=Origin.POINTER),
+    # same as
+    # PointerAction.move(250, 300, duration=1000, origin=Origin.VIEWPORT),
+    PointerAction.up(),
+])
+c.touch_perform([finger1])
+
+# simulate pinchOut
+finger2 = TouchActions.pointer("finger2", actions=[
+    PointerAction.move(150, 300),
+    PointerAction.down(),
+    PointerAction.move(-50, 0, duration=1000, origin=Origin.POINTER),
+    PointerAction.up(),
+])
+c.touch_perform([finger1, finger2])
+
+# even through touch actions can simulate key events
+# but it is not recommended, it's better to use send_keys instead
+```
+
+## Breaking change
+
+Removed in WDA 7.0 and wdapy 1.0
+
+```
 from wdapy import Gesture, GestureOption as Option
 c.touch_perform([
     Gesture("press", Option(x=100, y=200)),
@@ -113,16 +155,13 @@ c.touch_perform([
     Gesture("moveTo", Option(x=100, y = 100)),
     Gesture("release")
 ])
-# dismiss keyboard
-# by tap keyboard button to dismiss, default keyNames are ["前往", "发送", "Send", "Done", "Return"]
-c.keyboard_dismiss(["Done", "Return"])
 ```
+
 
 ## How to contribute
 Assume that you want to add a new method
 
-- First step, add method usage to README.md
-- Define types in _types.py (if necessary)
+- First step, add method usage to README.md, README_CN.md
 - Add unit test in under direction tests/
 - Add your name in the section `## Contributors`
 
@@ -134,6 +173,9 @@ Github actions will build targz and wheel and publish to https://pypi.org
 
 - [codeskyblue](https://github.com/codeskyblue)
 - [justinxiang](https://github.com/Justin-Xiang)
+
+## Alternative
+- https://github.com/openatx/facebook-wda
 
 ## LICENSE
 [MIT](LICENSE)
