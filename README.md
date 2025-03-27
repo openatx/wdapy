@@ -8,8 +8,9 @@ Follow WDA API written in <https://github.com/appium/WebDriverAgent/blob/master/
 Current WDA: 9.3.3
 
 ## Requires
-Python 3.7+
+Recommended Python **3.9+**
 
+> Might be work with Python 3.7+
 > Run unittest require py 3.8+
 
 ## Installation
@@ -151,7 +152,7 @@ Removed in WDA 7.0 and wdapy 1.0
 from wdapy import Gesture, GestureOption as Option
 c.touch_perform([
     Gesture("press", Option(x=100, y=200)),
-    Gesture("wait", Option(ms=100)), # ms shoud > 17
+    Gesture("wait", Option(ms=100)), # ms should > 17
     Gesture("moveTo", Option(x=100, y = 100)),
     Gesture("release")
 ])
