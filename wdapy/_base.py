@@ -7,6 +7,7 @@
 from http.client import HTTPConnection, HTTPSConnection
 import logging
 import typing
+from typing import Optional, Union
 
 import json
 from retry import retry
@@ -22,7 +23,7 @@ from wdapy.usbmux.pyusbmux import select_device
 logger = logging.getLogger(__name__)
 
 class HTTPResponseWrapper:
-    def __init__(self, content: bytes, status_code: int):
+    def __init__(self, content: Union[bytes, bytearray], status_code: int):
         self.content = content
         self.status_code = status_code
     
@@ -55,10 +56,19 @@ class BaseClient:
     def __init__(self, wda_url: str):
         self._wda_url = wda_url.rstrip("/") + "/"
 
-        self._session_id: str = None
-        self._recover: Recover = None
+        self._session_id: Optional[str] = None
+        self._recover: Optional[Recover] = None
 
         self.__request_timeout = DEFAULT_HTTP_TIMEOUT
+        self.__debug = False
+
+    @property
+    def debug(self) -> bool:
+        return self.__debug
+
+    @debug.setter
+    def debug(self, v: bool):
+        self.__debug = v
     
     @property
     def request_timeout(self) -> float:
@@ -73,9 +83,9 @@ class BaseClient:
         return StatusInfo.value_of(data)
 
     def session(self,
-                bundle_id: str = None,
-                arguments: list = None,
-                environment: dict = None) -> str:
+                bundle_id: Optional[str] = None,
+                arguments: Optional[list] = None,
+                environment: Optional[dict] = None) -> Optional[str]:
         """ create session and return session id """
         capabilities = {}
         if bundle_id:
@@ -100,7 +110,7 @@ class BaseClient:
     def set_recover_handler(self, recover: Recover):
         self._recover = recover
 
-    def _get_valid_session_id(self) -> str:
+    def _get_valid_session_id(self) -> Optional[str]:
         if self._session_id:
             return self._session_id
         old_session_id = self.status().session_id
@@ -110,7 +120,7 @@ class BaseClient:
             self._session_id = self.session()
         return self._session_id
 
-    def session_request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
+    def session_request(self, method: RequestMethod, urlpath: str, payload: Optional[dict] = None) -> dict:
         """ request with session_id """
         session_id = self._get_valid_session_id()
         session_urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
@@ -124,15 +134,16 @@ class BaseClient:
             session_urlpath = f"/session/{session_id}/" + urlpath.lstrip("/")
             return self.request(method, session_urlpath, payload)
 
-    def request(self, method: RequestMethod, urlpath: str, payload: dict = None) -> dict:
+    def request(self, method: RequestMethod, urlpath: str, payload: Optional[dict] = None) -> dict:
         """
         Raises:
             RequestError, WDASessionDoesNotExist
         """
         full_url = self._wda_url.rstrip("/") + "/" + urlpath.lstrip("/")
         payload_debug = payload or ""
-        logger.debug("$ %s", f"curl -X{method} --max-time {self.request_timeout:d} {full_url} -d {payload_debug!r}")
-        
+        payload_debug = json.dumps(payload_debug, ensure_ascii=False)
+        if self.debug:
+            print(f"$ curl -X{method} --max-time {self.request_timeout:d} {full_url} -d {payload_debug!r}")
         resp = self._request_http(method, full_url, payload)
         try:
             short_json = resp.json().copy()
@@ -143,7 +154,8 @@ class BaseClient:
             if isinstance(v, str) and len(v) > 40:
                 v = v[:20] + "... skip ..." + v[-10:]
             short_json[k] = v
-        logger.debug("==> Response <==\n%s", json.dumps(short_json, indent=4, ensure_ascii=False))
+        if self.debug:
+            print(f"==> Response <==\n{json.dumps(short_json, indent=4, ensure_ascii=False)}")
 
         value = resp.json().get("value")
         if value and isinstance(value, dict) and value.get("error"):
@@ -152,7 +164,7 @@ class BaseClient:
         return resp.json()
 
     @retry(RequestError, tries=2, delay=0.2, jitter=0.1, logger=logging)
-    def _request_http(self, method: RequestMethod, url: str, payload: dict, **kwargs) -> HTTPResponseWrapper:
+    def _request_http(self, method: RequestMethod, url: str, payload: Optional[dict] = None, **kwargs) -> HTTPResponseWrapper:
         """
         Raises:
             RequestError, WDAFatalError

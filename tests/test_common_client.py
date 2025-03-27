@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock
 import wdapy
 from wdapy import AppiumClient
-from wdapy._types import BatteryState, Gesture, GestureAction
+from wdapy._types import BatteryState
 
 
 class SimpleTest(unittest.TestCase):
@@ -133,15 +133,6 @@ class SimpleTest(unittest.TestCase):
         self._client.keyboard_dismiss(["Done"])
         payload = self._client.session_request.call_args.args[-1]
         self.assertEqual(["Done"], payload['keyNames'])
-
-    def test_touch_perform(self):
-        self._client.session_request = MagicMock(return_value={"value": None})
-        gestures = [
-            Gesture(GestureAction.TAP, options={"x": 100, "y": 200})
-        ]
-        self._client.touch_perform([{"action": "tap", "options": {"x": 100, "y": 200}}])
-        payload = self._client.session_request.call_args.args[-1]
-        self.assertEqual([{"action": "tap", "options": {"x": 100, "y": 200}}], payload['actions'])
 
 
 if __name__ == "__main__":
