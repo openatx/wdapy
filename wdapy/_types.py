@@ -27,7 +27,7 @@ class Recover(abc.ABC):
 class _Base:
     def __init__(self):
         # set default value
-        for k, _ in typing.get_type_hints(self).items():
+        for k, _ in typing.get_type_hints(type(self)).items():
             if not hasattr(self, k):
                 setattr(self, k, None)
 
